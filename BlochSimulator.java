@@ -4,94 +4,79 @@ import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Locale;
 
 public class BlochSimulator {
 
     public static void main(String[] args) throws IOException {
-        // Lettura dinamica della porta per Render
         int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         
-        server.createContext("/calculate", new CalculateHandler());
-        server.setExecutor(null);
+        // Context per i CALCOLI FISICI
+        server.createContext("/calculate", new BlochHandler());
+        
+        // Context per i FILE STATICI (HTML e JS)
+        server.createContext("/", new StaticFileHandler());
+        
+        server.setExecutor(null); 
+        System.out.println("Server Unificato Vida 3T avviato sulla porta " + port);
         server.start();
-        System.out.println("Bloch Simulator Server avviato sulla porta: " + port);
     }
 
-    static class CalculateHandler implements HttpHandler {
+    // GESTORE DEI CALCOLI (REST API)
+    static class BlochHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            // Configurazione rigorosa CORS per comunicazione Frontend -> Backend
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
-
-            // Risposta immediata per il preflight CORS
-            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
-                exchange.sendResponseHeaders(204, -1);
-                return;
-            }
-
-            try {
-                // Parsing parametri GET
-                Map<String, Double> params = parseQueryParams(exchange.getRequestURI().getQuery());
-                double pd = params.getOrDefault("pd", 1.0);
-                double t1 = params.getOrDefault("t1", 1000.0);
-                double t2 = params.getOrDefault("t2", 100.0);
-                double tr = params.getOrDefault("tr", 2000.0);
-                double te = params.getOrDefault("te", 50.0);
-
-                // Risoluzione analitica equazioni di Bloch (Math a 64-bit precision)
-                // 1. Recupero Longitudinale durante TR
-                double mz = pd * (1.0 - Math.exp(-tr / t1));
-                
-                // 2. Decadimento Trasversale durante TE
-                double mxy = mz * Math.exp(-te / t2);
-                
-                double mx = mxy; // Proiezione semplificata su asse X
-                double my = 0.0;
-                
-                // Magnitudine del segnale
-                double signal = Math.sqrt(mx * mx + my * my);
-
-                // Costruzione risposta JSON
-                String jsonResponse = String.format(java.util.Locale.US, 
-                    "{\"Mx\": %.8f, \"My\": %.8f, \"Mz\": %.8f, \"Signal\": %.8f}", 
-                    mx, my, mz, signal);
-
-                byte[] responseBytes = jsonResponse.getBytes("UTF-8");
-                exchange.getResponseHeaders().add("Content-Type", "application/json");
-                exchange.sendResponseHeaders(200, responseBytes.length);
-                
-                try (OutputStream os = exchange.getResponseBody()) {
-                    os.write(responseBytes);
-                }
-            } catch (Exception e) {
-                String error = "{\"error\": \"Invalid or missing parameters.\"}";
-                exchange.getResponseHeaders().add("Content-Type", "application/json");
-                exchange.sendResponseHeaders(400, error.getBytes().length);
-                try (OutputStream os = exchange.getResponseBody()) {
-                    os.write(error.getBytes());
-                }
-            }
-        }
-
-        private Map<String, Double> parseQueryParams(String query) {
-            Map<String, Double> result = new HashMap<>();
-            if (query == null || query.isEmpty()) return result;
+            // Qui inseriamo la tua logica solveRelaxation
+            String response = solveRelaxation(0.85, 0.85, 0.0, 0.0, 810.0, 42.0, 100.0);
             
-            String[] pairs = query.split("&");
-            for (String pair : pairs) {
-                String[] entry = pair.split("=");
-                if (entry.length > 1) {
-                    try {
-                        result.put(entry[0].toLowerCase(), Double.parseDouble(entry[1]));
-                    } catch (NumberFormatException ignored) {}
-                }
-            }
-            return result;
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.sendResponseHeaders(200, response.length());
+            OutputStream os = exchange.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
         }
+    }
+
+    // GESTORE DEI FILE (Serve index.html e app.js)
+    static class StaticFileHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String path = exchange.getRequestURI().getPath();
+            if (path.equals("/")) path = "/index.html"; // Default alla home
+            
+            try {
+                // Rimuove il primo slash per cercare il file nella cartella corrente
+                byte[] fileBytes = Files.readAllBytes(Paths.get(path.substring(1)));
+                
+                // Imposta il tipo di file corretto
+                if (path.endsWith(".html")) exchange.getResponseHeaders().add("Content-Type", "text/html");
+                if (path.endsWith(".js")) exchange.getResponseHeaders().add("Content-Type", "application/javascript");
+                
+                exchange.sendResponseHeaders(200, fileBytes.length);
+                OutputStream os = exchange.getResponseBody();
+                os.write(fileBytes);
+                os.close();
+            } catch (IOException e) {
+                String error = "404 File Not Found: " + path;
+                exchange.sendResponseHeaders(404, error.length());
+                OutputStream os = exchange.getResponseBody();
+                os.write(error.getBytes());
+                os.close();
+            }
+        }
+    }
+
+    public static String solveRelaxation(double m0, double mx0, double my0, double mz0, double t1, double t2, double dt) {
+        double eT2 = Math.exp(-dt / t2);
+        double mx = mx0 * eT2;
+        double my = my0 * eT2;
+        double eT1 = Math.exp(-dt / t1);
+        double mz = mz0 * eT1 + m0 * (1.0 - eT1);
+        double signal = Math.sqrt(mx * mx + my * my);
+        return String.format(Locale.US, "{\"Mx\": %.8f, \"My\": %.8f, \"Mz\": %.8f, \"Signal\": %.8f}", mx, my, mz, signal);
     }
 }

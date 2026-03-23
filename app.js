@@ -1,3 +1,7 @@
+// ==========================================
+// CONFIGURAZIONE E STATO INIZIALE
+// ==========================================
+
 // URL REST API del backend Java ospitato su Render
 const API_URL = "https://mri-physics-core.onrender.com/calculate";
 
@@ -57,7 +61,10 @@ const config = {
     ]
 };
 
-// UI Handlers & Setup
+// ==========================================
+// UI HANDLERS & NAVIGATION
+// ==========================================
+
 document.getElementById('login-pwd').addEventListener('keydown', (e) => { if(e.key==='Enter') checkPassword(); });
 function checkPassword() {
     if (document.getElementById('login-pwd').value === 'simulatore') {
@@ -79,13 +86,17 @@ document.getElementById('quick-search').addEventListener('input', function(e) {
             section.fields.forEach(field => {
                 if (field.label.toLowerCase().includes(query)) {
                     const div = document.createElement('div');
-                    div.className = 'px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 cursor-pointer border-b border-slate-800';
+                    div.className = 'px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 cursor-pointer border-b border-slate-800 transition-colors';
                     div.innerText = `${field.label} - Tab: ${tabKey.toUpperCase()}`;
                     div.onclick = () => {
                         switchTab(tabKey);
                         setTimeout(() => {
                             const el = document.getElementById(`inp-${field.id}`);
-                            if(el) { el.focus(); el.classList.add('ring-2', 'ring-blue-400'); setTimeout(()=>el.classList.remove('ring-2'), 2000); }
+                            if(el) { 
+                                el.focus(); 
+                                el.classList.add('ring-2', 'ring-blue-400'); 
+                                setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000); 
+                            }
                         }, 50);
                         resContainer.classList.add('hidden');
                         document.getElementById('quick-search').value = '';
@@ -96,8 +107,12 @@ document.getElementById('quick-search').addEventListener('input', function(e) {
         });
     });
     resContainer.classList.remove('hidden');
-    resContainer.classList.add('flex');
+    resContainer.classList.add('flex', 'flex-col');
 });
+
+// ==========================================
+// RENDERING MOTORE UI
+// ==========================================
 
 function autoIso() {
     const dx = state.fovRead / state.baseRes;
@@ -105,10 +120,12 @@ function autoIso() {
     state.phaseResPct = 100;
     state.sliceResPct = 100;
     state.fovPhasePct = 100;
-    document.querySelectorAll(`[id="inp-sliceThick"]`).forEach(el => el.value = state.sliceThick);
-    document.querySelectorAll(`[id="inp-phaseResPct"]`).forEach(el => el.value = 100);
-    document.querySelectorAll(`[id="inp-sliceResPct"]`).forEach(el => el.value = 100);
-    document.querySelectorAll(`[id="inp-fovPhasePct"]`).forEach(el => el.value = 100);
+    
+    // Sincronizza visivamente gli input
+    ['sliceThick', 'phaseResPct', 'sliceResPct', 'fovPhasePct'].forEach(id => {
+        document.querySelectorAll(`[id="inp-${id}"]`).forEach(el => el.value = state[id]);
+    });
+    
     calculatePhysics();
 }
 
@@ -124,7 +141,9 @@ function renderTabContent(tabKey) {
         let html = `<h3 class="text-xs font-bold text-blue-500 mb-3 uppercase border-b border-slate-700 pb-1">${sec.section}</h3><div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">`;
         sec.fields.forEach(f => {
             let val = state[f.id] !== undefined ? state[f.id] : f.val;
-            let disabled = (is2D &&['sliceOS', 'sliceResPct', 'slicePartial'].includes(f.id)) || 
+            
+            // Logica dei vincoli fisici e di accelerazione
+            let disabled = (is2D && ['sliceOS', 'sliceResPct', 'slicePartial'].includes(f.id)) || 
                            (isCS && f.id === 'accelR') || 
                            (is2D && f.id === 'accelType' && val === 'CAIPIRINHA') ? 'disabled' : '';
             let opacity = disabled ? 'opacity: 0.3;' : '';
@@ -132,20 +151,21 @@ function renderTabContent(tabKey) {
             
             let inp = '';
             if (f.type === 'select') {
-                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs" ${disabled}>
-                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''} ${f.id==='accelType'&&o==='CAIPIRINHA'&&is2D?'disabled':''}>${o}</option>`).join('')}</select>`;
+                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs outline-none" ${disabled}>
+                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''} ${f.id === 'accelType' && o === 'CAIPIRINHA' && is2D ? 'disabled' : ''}>${o}</option>`).join('')}
+                </select>`;
             } else if (f.type === 'range') {
-                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500" ${disabled}><span id="val-${f.id}" class="text-xs font-mono text-blue-400">${val}x</span></div>`;
+                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500" ${disabled}><span id="val-${f.id}" class="text-xs font-mono text-blue-400 w-8 text-right">${val}x</span></div>`;
             } else if (f.type === 'button') {
-                inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500">${f.label}</button>`;
+                inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500 transition-colors">${f.label}</button>`;
             } else {
-                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs" ${disabled}>`;
+                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs outline-none" ${disabled}>`;
             }
 
-            html += `<div class="flex flex-col gap-1 transition-opacity justify-end" style="${opacity} ${display}">
-                ${f.type !== 'button' ? `<label class="text-[10px] uppercase text-slate-400">${f.label}</label>` : ''}${inp}</div>`;
+            html += `<div class="flex flex-col gap-1 transition-all justify-end" style="${opacity} ${display}">
+                ${f.type !== 'button' ? `<label class="text-[10px] uppercase text-slate-400 tracking-wider">${f.label}</label>` : ''}${inp}</div>`;
         });
-        container.innerHTML += `<div class="mb-6">${html}</div></div>`;
+        container.innerHTML += `<div class="mb-6">${html}</div>`;
     });
 }
 
@@ -161,10 +181,10 @@ function updateState(key, value) {
     else state[key] = parseFloat(value) || 0;
     
     document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => el.value = value);
-    if(document.getElementById(`val-${key}`)) document.getElementById(`val-${key}`).innerText = value + (key==='csFactor'?'x':'');
+    if(document.getElementById(`val-${key}`)) document.getElementById(`val-${key}`).innerText = value + (key==='csFactor' ? 'x' : '');
     
     calculatePhysics();
-    renderTabContent(document.querySelector('.tab-btn.active').dataset.target); // Rerender to apply constraints
+    renderTabContent(document.querySelector('.tab-btn.active').dataset.target); // Forza il rerender per applicare i vincoli
 }
 
 function changeRegion(val) {
@@ -183,7 +203,7 @@ document.getElementById('pat-height').addEventListener('input', calculatePhysics
 // ==========================================
 
 async function fetchSignalFromJava(t1, t2, pd, tr, te, isFat) {
-    // SATURATION LOGIC UI -> Engine
+    // SATURATION LOGIC UI -> Engine (Agisce bypassando il calcolo)
     if (state.saturation === 'Fat Sat' && isFat) return `rgb(10, 10, 10)`;
     if (state.saturation === 'Water Sat' && !isFat) return `rgb(10, 10, 10)`;
 
@@ -195,14 +215,15 @@ async function fetchSignalFromJava(t1, t2, pd, tr, te, isFat) {
         if (!response.ok) throw new Error("API call failed");
         const data = await response.json();
         
-        // Estrazione Magnitudine Segnale
+        // Estrazione Magnitudine Segnale dal Solutore Bloch
         const signal = data.Signal;
         
-        // Mapping visivo per la UI
+        // Mapping visivo per la UI (850 è il moltiplicatore dinamico tarato su Vida 3T)
         const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
         return `rgb(${gray}, ${gray}, ${gray})`;
+        
     } catch (err) {
-        // Fallback locale in caso di assenza server
+        // Fallback matematico locale nel caso in cui Render sia in sospensione
         const signal = pd * (1 - Math.exp(-tr / t1)) * Math.exp(-te / t2);
         const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
         return `rgb(${gray}, ${gray}, ${gray})`;
@@ -214,18 +235,21 @@ async function calculatePhysics() {
     const isCS = state.accelType === 'CS';
     const effR = isCS ? 1.0 : state.accelR;
 
+    // --- Matrice Geometrica ---
     const N_x = state.baseRes;
     const N_y = Math.round(state.baseRes * (state.fovPhasePct / 100) * (state.phaseResPct / 100));
     let N_z = is3D ? Math.round(state.slices * (state.sliceResPct / 100)) : 1;
 
+    // --- Isotropia e Voxel ---
     const dx = state.fovRead / N_x;
     let dy = (state.fovRead * (state.fovPhasePct / 100)) / N_y;
-    if (state.fovPhasePct === 100 && state.phaseResPct === 100) dy = dx; 
+    if (state.fovPhasePct === 100 && state.phaseResPct === 100) dy = dx; // Forza perfetta quadratura 
     let dz = is3D ? (state.slices * state.sliceThick) / N_z : state.sliceThick;
 
     const V_voxel = dx * dy * dz;
     const isIsotropic = (Math.max(dx, dy, dz) - Math.min(dx, dy, dz)) <= 0.01;
 
+    // --- Calcolo del Tempo di Acquisizione (TA) ---
     const effNy = N_y * (1 + state.phaseOS / 100) * (state.phasePartial / 100);
     
     let taSeconds = 0;
@@ -243,31 +267,38 @@ async function calculatePhysics() {
         displayedShots = totalLines / (state.turboFactor * effR);
     }
     
+    // Sconto temporale del Compressed Sensing
     if(isCS) {
         taSeconds = taSeconds / state.csFactor;
         displayedShots = displayedShots / state.csFactor;
     }
 
+    // --- Calcolo SAR ---
     const weight = parseFloat(document.getElementById('pat-weight').value) || 75;
     const height = parseFloat(document.getElementById('pat-height').value) || 175;
     const sar = (0.002 * state.turboFactor * (weight / Math.pow(height/100, 2)) / (state.tr / 1000)) * Math.pow(state.flipAngle / 180, 2);
 
+    // --- Calcolo Rapporto Segnale Rumore (SNR) ---
     const bwHzPx = state.bw / N_y; 
     const acqTerm = is3D ? (state.nex * N_y * N_z) / 14500 : (state.nex * N_y) / 14500;
     
     let snrBase = (V_voxel / 0.64) * Math.sqrt(acqTerm) * Math.sqrt(521 / state.bw) * Math.exp(-state.te / 85) * 3.5; 
-    
     let snrFinal = snrBase;
+    
+    // Moltiplicatori di Shift Chimico
     if (bwHzPx < 100) snrFinal *= 1.15; else if (bwHzPx > 250) snrFinal *= 0.60;
 
+    // Dinamica Accelerazione
     if (isCS) {
+        // Il CS recupera parte dell'SNR perso tramite denoising iterativo
         snrFinal *= Math.sqrt(1.0 / state.csFactor) * (Math.sqrt(state.csFactor) * 0.9);
     } else {
+        // Penalità di Parallel Imaging con G-Factor
         let g_eff = state.accelType === 'CAIPIRINHA' ? Math.max(1.0, state.gFactor - 0.3) : state.gFactor;
         snrFinal *= (1 / (g_eff * Math.sqrt(effR)));
     }
 
-    // Dashboard Update
+    // --- Dashboard UI Update ---
     document.getElementById('out-ta').innerText = `${Math.floor(taSeconds / 60)}:${Math.round(taSeconds % 60).toString().padStart(2, '0')}`;
     document.getElementById('out-etl').innerText = `${state.turboFactor} / ${Math.ceil(displayedShots)}`;
     document.getElementById('out-res').innerText = `${dx.toFixed(2)} × ${dy.toFixed(2)} × ${dz.toFixed(2)} mm`;
@@ -281,8 +312,9 @@ async function calculatePhysics() {
 
     const isoEl = document.getElementById('out-iso');
     isoEl.innerText = isIsotropic ? 'ISO ✅' : 'ANISO';
-    isoEl.className = `font-bold text-[10px] ${isIsotropic ? 'text-green-500' : 'text-yellow-600'}`;
+    isoEl.className = `font-bold text-[10px] tracking-widest uppercase ${isIsotropic ? 'text-green-500' : 'text-yellow-600'}`;
 
+    // Avvia Rendering SVG
     await renderSVGPhantom(snrFinal, bwHzPx);
 }
 
@@ -293,7 +325,8 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
     document.getElementById('legend-abdomen').classList.remove('hidden');
 
     // Chiamate API Backend in Parallelo per il calcolo Bloch
-    const[c_liver, c_spleen, c_kidney, c_muscle, c_fat, c_spine] = await Promise.all([
+    // I parametri sono: T1, T2, PD, TR, TE, isFat
+    const [c_liver, c_spleen, c_kidney, c_muscle, c_fat, c_spine] = await Promise.all([
         fetchSignalFromJava(1200, 160, 0.85, state.tr, state.te, false),
         fetchSignalFromJava(1000, 120, 0.90, state.tr, state.te, false),
         fetchSignalFromJava(1100, 130, 0.90, state.tr, state.te, false),
@@ -302,15 +335,21 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
         fetchSignalFromJava(300, 60, 0.80, state.tr, state.te, false)
     ]);
 
-    // Assegnazione colori al fantoccio SVG
-    document.getElementById('ph-abd-ax-liver').setAttribute('fill', c_liver);
-    document.getElementById('ph-abd-ax-spleen').setAttribute('fill', c_spleen);
-    document.getElementById('ph-abd-ax-kidney-r').setAttribute('fill', c_kidney);
-    document.getElementById('ph-abd-ax-kidney-l').setAttribute('fill', c_kidney);
-    document.getElementById('ph-abd-ax-muscle').setAttribute('fill', c_muscle);
-    document.getElementById('ph-abd-ax-fat').setAttribute('fill', c_fat);
-    document.getElementById('ph-abd-ax-spine').setAttribute('fill', c_spine);
+    // Applicazione colori al fantoccio SVG
+    const applyColor = (id, color) => {
+        const el = document.getElementById(id);
+        if(el) el.setAttribute('fill', color);
+    };
 
+    applyColor('ph-abd-ax-liver', c_liver);
+    applyColor('ph-abd-ax-spleen', c_spleen);
+    applyColor('ph-abd-ax-kidney-r', c_kidney);
+    applyColor('ph-abd-ax-kidney-l', c_kidney);
+    applyColor('ph-abd-ax-muscle', c_muscle);
+    applyColor('ph-abd-ax-fat', c_fat);
+    applyColor('ph-abd-ax-spine', c_spine);
+
+    // Aggiornamento Legenda
     document.getElementById('leg-abd-liver').style.backgroundColor = c_liver;
     document.getElementById('leg-abd-spleen').style.backgroundColor = c_spleen;
     document.getElementById('leg-abd-kidney').style.backgroundColor = c_kidney;
@@ -323,12 +362,12 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
     document.getElementById('ph-noise').setAttribute('opacity', baseNoise);
     document.getElementById('ph-noise-gfactor').setAttribute('opacity', gFactor);
 
-    // Gestione visuale Compressed Sensing (Blur Iterativo)
+    // Gestione visuale Compressed Sensing (Blur Iterativo vs Dettaglio)
     let filterStr = 'grayscale(100%) ';
     if (state.accelType === 'CS') filterStr += `blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
     document.getElementById('phantom-container').style.filter = filterStr;
 
-    // Artefatto da Shift Chimico Vettoriale
+    // Artefatto da Shift Chimico
     const shiftPx = bwHzPx < 100 ? 3 : (bwHzPx <= 250 ? 1 : 0);
     document.querySelectorAll('.transform-water').forEach(el => {
         el.style.transform = `translateX(${shiftPx}px)`;
@@ -336,4 +375,8 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => { switchTab('routine'); calculatePhysics(); });
+// Inizializzazione al caricamento
+document.addEventListener('DOMContentLoaded', () => { 
+    switchTab('routine'); 
+    calculatePhysics(); 
+});

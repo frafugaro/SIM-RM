@@ -1,0 +1,6 @@
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+COPY BlochSimulator.java .
+RUN javac BlochSimulator.java
+EXPOSE 8080
+CMD ["java", "BlochSimulator"]

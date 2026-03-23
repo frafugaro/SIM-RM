@@ -3,7 +3,7 @@
 // ==========================================
 
 // URL REST API del backend Java ospitato su Render
-const API_URL = "https://mri-physics-core.onrender.com/calculate";
+const API_URL = "/calculate"; // Molto più pulito e veloce
 
 const state = {
     orientation: 'Transversal',

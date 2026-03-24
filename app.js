@@ -1,11 +1,12 @@
 try {
     window.API_URL = "https://mri-physics-core.onrender.com/calculate";
 
+    // 1. STATO INIZIALE (Sincronizzato con UI Siemens)
     window.state = {
         slabGroup: '1', slabs: '1', slices: 60, position: '0.0', orientation: 'Transversal', phaseEncDir: 'R >> L',
         phaseOS: 30.0, sliceOS: 5.0, fovRead: 220.0, fovPhasePct: 100.0, sliceThick: 1.0, tr: 2200.0, te: 105.0, nex: 1.8, conc: 1,
         autoAlign: 'Head > Brain', coilElements: 'BO2,3;SP4,5',
-        flipAngle: 135.0, saturation: 'Nessuna', darkBlood: false, bloodSuppression: 'Off',
+        flipAngle: 135.0, saturation: 'Standard', darkBlood: false, bloodSuppression: 'Off',
         dynamicMode: 'Standard', measurements: 1.0, multipleSeries: 'Each Measurement', reordering: 'Linear',
         baseRes: 320, phaseResPct: 91.0, sliceResPct: 81.0, interp: '1',
         accelType: 'GRAPPA', accelR: 4.0, refScans: 'GRE/Separate', accelPE: 2.0, refLinesPE: 24, accel3D: 2.0, refLines3D: 24,
@@ -15,65 +16,110 @@ try {
         region: 'abdomen', patWeight: 75, patHeight: 175
     };
 
+    // 2. CONFIGURAZIONE TABS (Struttura Syngo Rigorosa)
     window.config = {
         routine:[
-            { section: 'Routine Settings', fields:[
+            { section: 'Routine', fields:[
+                { id: 'slabGroup', label: 'Slab Group', val: state.slabGroup, type: 'text', readOnly: true },
+                { id: 'slabs', label: 'Slabs', val: state.slabs, type: 'text', readOnly: true },
                 { id: 'slices', label: 'Slices per Slab', val: state.slices, type: 'number', step: 2 },
+                { id: 'position', label: 'Position', val: state.position, type: 'text' },
                 { id: 'orientation', label: 'Orientation', val: state.orientation, type: 'select', options:['Transversal', 'Coronal', 'Sagittal'] },
-                { id: 'phaseOS', label: 'Phase OS (%)', val: state.phaseOS, type: 'number', step: 10 },
-                { id: 'sliceOS', label: 'Slice OS (%)', val: state.sliceOS, type: 'number', step: 5 },
-                { id: 'fovRead', label: 'FOV Read (mm)', val: state.fovRead, type: 'number', step: 10 },
-                { id: 'fovPhasePct', label: 'FOV Phase (%)', val: state.fovPhasePct, type: 'number', step: 5 },
-                { id: 'sliceThick', label: 'Slice Thick (mm)', val: state.sliceThick, type: 'number', step: 0.5 },
-                { id: 'tr', label: 'TR (ms)', val: state.tr, type: 'number', step: 100 },
-                { id: 'te', label: 'TE (ms)', val: state.te, type: 'number', step: 1 },
-                { id: 'nex', label: 'Averages', val: state.nex, type: 'number', step: 0.1 },
-                { id: 'conc', label: 'Concatenations', val: state.conc, type: 'number', step: 1 }
+                { id: 'phaseEncDir', label: 'Phase Encoding Dir.', val: state.phaseEncDir, type: 'select', options:['R >> L', 'A >> P'] },
+                { id: 'phaseOS', label: 'Phase Oversampling %', val: state.phaseOS, type: 'number', step: 10 },
+                { id: 'sliceOS', label: 'Slice Oversampling %', val: state.sliceOS, type: 'number', step: 5 },
+                { id: 'fovRead', label: 'FOV Read mm', val: state.fovRead, type: 'number', step: 10 },
+                { id: 'fovPhasePct', label: 'FOV Phase %', val: state.fovPhasePct, type: 'number', step: 5 },
+                { id: 'sliceThick', label: 'Slice Thickness mm', val: state.sliceThick, type: 'number', step: 0.5 },
+                { id: 'tr', label: 'TR ms', val: state.tr, type: 'number', step: 100 },
+                { id: 'te', label: 'TEeff ms', val: state.te, type: 'number', step: 1 },
+                { id: 'nex', label: 'Averages/NEX', val: state.nex, type: 'number', step: 0.1 },
+                { id: 'conc', label: 'Concatenations', val: state.conc, type: 'number', step: 1 },
+                { id: 'autoAlign', label: 'AutoAlign', val: state.autoAlign, type: 'text' },
+                { id: 'coilElements', label: 'Coil Elements', val: state.coilElements, type: 'text' }
             ]}
         ],
         contrast:[
             { section: 'Common', fields:[
-                { id: 'tr', label: 'TR (ms)', val: state.tr, type: 'number' },
-                { id: 'te', label: 'TE (ms)', val: state.te, type: 'number' },
-                { id: 'flipAngle', label: 'Flip Angle', val: state.flipAngle, type: 'number', step: 5 },
-                { id: 'saturation', label: 'Saturazione', val: state.saturation, type: 'select', options:['Nessuna', 'Fat Sat', 'Water Sat'] }
+                { id: 'tr', label: 'TR ms', val: state.tr, type: 'number' },
+                { id: 'te', label: 'TEeff ms', val: state.te, type: 'number' },
+                { id: 'flipAngle', label: 'Flip Angle deg', val: state.flipAngle, type: 'number' },
+                { id: 'saturation', label: 'Fat-Water Contrast', val: state.saturation, type: 'select', options:['Standard', 'Fat Sat', 'Water Sat'] },
+                { id: 'darkBlood', label: 'Dark Blood', val: state.darkBlood, type: 'checkbox' },
+                { id: 'bloodSuppression', label: 'Blood Suppression', val: state.bloodSuppression, type: 'select', options:['Off', 'On'] }
+            ]},
+            { section: 'Dynamic', fields:[
+                { id: 'dynamicMode', label: 'Dynamic Mode', val: state.dynamicMode, type: 'text' },
+                { id: 'measurements', label: 'Measurements', val: state.measurements, type: 'number' },
+                { id: 'multipleSeries', label: 'Multiple Series', val: state.multipleSeries, type: 'text' },
+                { id: 'reordering', label: 'Reordering', val: state.reordering, type: 'text' }
             ]}
         ],
         resolution:[
             { section: 'Common', fields:[
-                { id: 'baseRes', label: 'Base Resolution', val: state.baseRes, type: 'number', step: 16 },
-                { id: 'phaseResPct', label: 'Phase Res (%)', val: state.phaseResPct, type: 'number', step: 1 },
-                { id: 'sliceResPct', label: 'Slice Res (%)', val: state.sliceResPct, type: 'number', step: 1 }
+                { id: 'fovRead', label: 'FOV Read mm', val: state.fovRead, type: 'number' },
+                { id: 'fovPhasePct', label: 'FOV Phase %', val: state.fovPhasePct, type: 'number' },
+                { id: 'sliceThick', label: 'Slice Thickness mm', val: state.sliceThick, type: 'number' },
+                { id: 'baseRes', label: 'Base Resolution / Nx', val: state.baseRes, type: 'number' },
+                { id: 'phaseResPct', label: 'Phase Resolution %', val: state.phaseResPct, type: 'number' },
+                { id: 'sliceResPct', label: 'Slice Resolution %', val: state.sliceResPct, type: 'number' },
+                { id: 'interp', label: 'Interpolation', val: state.interp, type: 'select', options:['0', '1'] }
+            ]},
+            { section: 'Acceleration', fields:[
+                { id: 'accelType', label: 'Acceleration Mode', val: state.accelType, type: 'select', options:['GRAPPA', 'CAIPIRINHA', 'CS'] },
+                { id: 'accelR', label: 'Total Factor R', val: state.accelR, type: 'number' },
+                { id: 'refScans', label: 'Reference Scans', val: state.refScans, type: 'text' },
+                { id: 'accelPE', label: 'Acceleration Factor PE', val: state.accelPE, type: 'number' },
+                { id: 'refLinesPE', label: 'Reference Lines PE', val: state.refLinesPE, type: 'number' },
+                { id: 'accel3D', label: 'Acceleration Factor 3D', val: state.accel3D, type: 'number' },
+                { id: 'refLines3D', label: 'Reference Lines 3D', val: state.refLines3D, type: 'number' },
+                { id: 'reorderShift3D', label: 'Reordering Shift 3D', val: state.reorderShift3D, type: 'number' },
+                { id: 'phasePartial', label: 'Phase Partial Fourier %', val: state.phasePartial, type: 'number' },
+                { id: 'slicePartial', label: 'Slice Partial Fourier %', val: state.slicePartial, type: 'number' },
+                { id: 'gFactor', label: 'Fattore g', val: state.gFactor, type: 'number', step: 0.1 },
+                { id: 'csFactor', label: 'CS Factor', val: state.csFactor, type: 'range', min: 2, max: 10, step: 0.5 }
             ]}
         ],
         geometry:[
             { section: 'Geometry', fields:[
+                { id: 'slabGroup', label: 'Slab Group', val: state.slabGroup, type: 'text' },
+                { id: 'slabs', label: 'Slabs', val: state.slabs, type: 'text' },
                 { id: 'slices', label: 'Slices per Slab', val: state.slices, type: 'number' },
-                { id: 'fovRead', label: 'FOV Read (mm)', val: state.fovRead, type: 'number' },
-                { id: 'sliceThick', label: 'Slice Thick (mm)', val: state.sliceThick, type: 'number' },
-                { id: 'tr', label: 'TR (ms)', val: state.tr, type: 'number' }
+                { id: 'position', label: 'Position', val: state.position, type: 'text' },
+                { id: 'orientation', label: 'Orientation', val: state.orientation, type: 'select', options:['Transversal', 'Coronal', 'Sagittal'] },
+                { id: 'phaseEncDir', label: 'Phase Encoding Dir.', val: state.phaseEncDir, type: 'text' },
+                { id: 'phaseOS', label: 'Phase Oversampling %', val: state.phaseOS, type: 'number' },
+                { id: 'sliceOS', label: 'Slice Oversampling %', val: state.sliceOS, type: 'number' },
+                { id: 'fovRead', label: 'FOV Read mm', val: state.fovRead, type: 'number' },
+                { id: 'fovPhasePct', label: 'FOV Phase %', val: state.fovPhasePct, type: 'number' },
+                { id: 'sliceThick', label: 'Slice Thickness mm', val: state.sliceThick, type: 'number' },
+                { id: 'tr', label: 'TR ms', val: state.tr, type: 'number' },
+                { id: 'conc', label: 'Concatenations', val: state.conc, type: 'number' }
             ]}
         ],
         system:[
-            { section: 'Miscellaneous & Tx/Rx', fields:[
+            { section: 'Miscellaneous', fields:[
                 { label: 'B0 Shim', val: 'Standard', type: 'text', readOnly: true },
-                { label: 'Frequency 1H (MHz)', val: 123.2, type: 'text', readOnly: true }
+                { label: 'Frequency 1H (MHz)', val: '123.2', type: 'text', readOnly: true }
             ]}
         ],
         physio:[
             { section: 'Signal', fields:[
-                { id: 'tr', label: 'TR (ms)', val: state.tr, type: 'number' }
+                { id: 'tr', label: 'TR ms', val: state.tr, type: 'number' }
+            ]},
+            { section: 'Cardiac', fields:[
+                { id: 'fovReadPhaseText', label: 'FOV Read / Phase', val: state.fovReadPhaseText, type: 'text', readOnly: true },
+                { id: 'phaseResPct', label: 'Phase Resolution %', val: state.phaseResPct, type: 'number' }
             ]}
         ],
         sequence:[
             { section: 'Sequence', fields:[
+                { id: 'seqName', label: 'Sequence Name', val: state.seqName, type: 'text' },
                 { id: 'dimension', label: 'Dimension', val: state.dimension, type: 'select', options:['2D', '3D'] },
-                { id: 'bw', label: 'Bandwidth (Hz)', val: state.bw, type: 'number', step: 10 },
-                { id: 'turboFactor', label: 'Turbo Factor', val: state.turboFactor, type: 'number', step: 1 },
-                { id: 'accelType', label: 'Acceleration', val: state.accelType, type: 'select', options:['GRAPPA', 'CAIPIRINHA', 'CS'] },
-                { id: 'accelR', label: 'Accel Factor (R)', val: state.accelR, type: 'number', step: 1 },
-                { id: 'csFactor', label: 'CS Factor', val: state.csFactor, type: 'range', min: 2, max: 10, step: 0.5 },
-                { id: 'gFactor', label: 'Fattore g', val: state.gFactor, type: 'number', step: 0.1 }
+                { id: 'bw', label: 'Bandwidth Hz/Px', val: state.bw, type: 'number' },
+                { id: 'echoSpacing', label: 'Echo Spacing ms', val: state.echoSpacing, type: 'number', step: 0.1 },
+                { id: 'turboFactor', label: 'Turbo Factor/ETL', val: state.turboFactor, type: 'number' },
+                { id: 'echoTrainDuration', label: 'Echo Train Duration ms', val: state.echoTrainDuration, type: 'number' }
             ]}
         ],
         setup:[
@@ -83,20 +129,17 @@ try {
         ]
     };
 
+    // 3. LOGICHE DI GATEWAY (LOGIN) E RICERCA
     window.checkPassword = function() {
-        try {
-            if (document.getElementById('login-pwd').value === 'simulatore') {
-                document.getElementById('login-screen').style.opacity = '0';
-                setTimeout(() => { 
-                    document.getElementById('login-screen').style.display = 'none'; 
-                    window.switchTab('routine'); 
-                    window.calculatePhysics();
-                }, 500);
-            } else {
-                document.getElementById('login-err').classList.remove('hidden');
-            }
-        } catch(e) {
-            console.error("Errore durante il login:", e);
+        if (document.getElementById('login-pwd').value === 'simulatore') {
+            document.getElementById('login-screen').style.opacity = '0';
+            setTimeout(() => { 
+                document.getElementById('login-screen').style.display = 'none'; 
+                window.switchTab('routine'); 
+                window.calculatePhysics();
+            }, 500);
+        } else {
+            document.getElementById('login-err').classList.remove('hidden');
         }
     };
 
@@ -138,7 +181,6 @@ try {
         window.switchTab(tabKey);
 
         if (!fieldId) return; 
-
         setTimeout(() => {
             const el = document.getElementById(`inp-${fieldId}`);
             if (el) {
@@ -150,6 +192,7 @@ try {
         }, 50);
     };
 
+    // 4. LOGICA DI RENDERING UI (NO-FOCUS-LOSS)
     window.autoIso = function() {
         const dx = (window.state.fovRead || 220) / (window.state.baseRes || 320);
         window.state.sliceThick = parseFloat(dx.toFixed(2));
@@ -189,10 +232,12 @@ try {
                         ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''} ${f.id==='accelType'&&o==='CAIPIRINHA'&&is2D?'disabled':''}>${o}</option>`).join('')}</select>`;
                 } else if (f.type === 'range') {
                     inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="window.updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500" ${disabled}><span id="val-${f.id}" class="text-xs font-mono text-blue-400">${val}x</span></div>`;
+                } else if (f.type === 'checkbox') {
+                    inp = `<input type="checkbox" id="inp-${f.id}" onchange="window.updateState('${f.id}', this.checked)" ${val ? 'checked' : ''} class="mt-1 w-4 h-4 bg-slate-900 border border-slate-700 rounded focus:ring-blue-500" ${disabled}>`;
                 } else if (f.type === 'button') {
                     inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500 outline-none">${f.label}</button>`;
                 } else {
-                    inp = `<input type="${f.type}" id="inp-${f.id}" oninput="window.updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs transition-opacity" ${disabled}>`;
+                    inp = `<input type="${f.type}" id="inp-${f.id}" oninput="window.updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs transition-opacity" ${disabled} ${f.readOnly ? 'readonly' : ''}>`;
                 }
 
                 html += `<div class="flex flex-col gap-1 transition-opacity justify-end" style="${opacity} ${display}">
@@ -218,8 +263,11 @@ try {
     };
 
     window.updateState = function(key, value) {
-        if (['dimension', 'orientation', 'saturation', 'accelType', 'region'].includes(key)) {
+        if (typeof value === 'boolean') {
             window.state[key] = value;
+        } else if (['dimension', 'orientation', 'saturation', 'accelType', 'region', 'position', 'phaseEncDir', 'autoAlign', 'coilElements', 'dynamicMode', 'multipleSeries', 'reordering', 'refScans', 'seqName', 'bloodSuppression', 'interp'].includes(key)) {
+            window.state[key] = value;
+            // Solo alcuni select richiedono rerender per sbloccare/bloccare campi
             if(['dimension', 'accelType'].includes(key)) {
                 window.calculatePhysics();
                 const activeTab = document.querySelector('.tab-btn.active');
@@ -232,7 +280,11 @@ try {
             window.state[key] = parseFloat(value) || 0;
         }
         
-        document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => { if(el.value != value) el.value = value; });
+        // Mantiene il focus aggiornando puntualmente gli ID
+        document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => { 
+            if(el.type === 'checkbox') el.checked = value;
+            else if(el.value != value) el.value = value; 
+        });
         if(document.getElementById(`val-${key}`)) document.getElementById(`val-${key}`).innerText = value + (key==='csFactor'?'x':'');
         
         window.calculatePhysics();
@@ -259,7 +311,7 @@ try {
             }
         }
 
-        const zFields =['sliceOS', 'sliceResPct', 'slicePartial'];
+        const zFields =['sliceOS', 'sliceResPct', 'slicePartial', 'accel3D', 'refLines3D', 'reorderShift3D'];
         zFields.forEach(f => {
             document.querySelectorAll(`[id="inp-${f}"]`).forEach(el => {
                 el.disabled = is2D;
@@ -307,16 +359,22 @@ try {
         }
 
         const activeGroup = document.getElementById(`ph-group-${viewId}`);
-        if(activeGroup) activeGroup.classList.remove('hidden');
+        if(activeGroup) {
+            activeGroup.classList.remove('hidden');
+            activeGroup.style.display = 'block'; // Forza display
+        }
 
         const activeLegend = document.getElementById(`legend-${legendId}`);
-        if(activeLegend) activeLegend.classList.remove('hidden');
+        if(activeLegend) {
+            activeLegend.classList.remove('hidden');
+            activeLegend.style.display = 'grid'; 
+        }
 
         const titles = { 
             'abdomen-axial': 'Axial Abdomen', 
             'abdomen-coronal': 'Coronal Abdomen', 
             'abdomen-sagittal': 'Sagittal Abdomen', 
-            'pelvis-axial': 'Axial Pelvis / Prostate',
+            'pelvis-axial': 'Axial Pelvis',
             'pelvis-coronal': 'Coronal Pelvis',
             'pelvis-sagittal': 'Sagittal Pelvis',
             'thorax-axial': 'Axial Thorax', 
@@ -326,6 +384,10 @@ try {
         };
         document.getElementById('phantom-title').innerText = titles[viewId] || 'Phantom';
     };
+
+    // ==========================================
+    // CORE PHYSICS & BLOCH 5-LEVEL SCALING
+    // ==========================================
 
     window.mapSignalToLevel = function(rawSignal, tr, te) {
         let referenceSignal;
@@ -340,6 +402,7 @@ try {
         let normalized = rawSignal / (referenceSignal * 0.9);
         let s = Math.max(0, Math.min(1.0, normalized));
 
+        // Scala a 5 livelli rigorosa (0=10, 1=60, 2=120, 3=190, 4=245)
         const levels =[10, 60, 120, 190, 245];
         let scaled = s * 4.0;
         let lowerIdx = Math.floor(scaled);
@@ -364,7 +427,7 @@ try {
         try {
             const url = `${window.API_URL}?pd=${pd}&t1=${t1}&t2=${t2}&tr=${effTR}&te=${effTE}`;
             const response = await fetch(url);
-            if (!response.ok) throw new Error("API call failed");
+            if (!response.ok) throw new Error("API fallita");
             const data = await response.json();
             rawSignal = data.Signal;
         } catch (err) {
@@ -383,6 +446,7 @@ try {
         const TR = window.state.tr || 1;
         const TE = window.state.te || 1;
         const tf = window.state.turboFactor || 1;
+        const nex = window.state.nex || 1;
 
         const N_x = window.state.baseRes || 1;
         const N_y = Math.round(N_x * ((window.state.fovPhasePct || 100) / 100) * ((window.state.phaseResPct || 100) / 100)) || 1;
@@ -405,12 +469,12 @@ try {
         if (is3D) {
             const effNz = N_z * (1 + (window.state.sliceOS || 0) / 100) * ((window.state.slicePartial || 100) / 100);
             totalLines = effNy * effNz;
-            taSeconds = (totalLines * (window.state.nex || 1) * TR) / (tf * effR * 1000);
+            taSeconds = (totalLines * nex * TR) / (tf * effR * 1000);
             displayedShots = totalLines / (tf * effR);
         } else {
             totalLines = effNy * (window.state.slices || 1);
             const fettePerTR = Math.max(1, Math.floor(TR / ((window.state.echoSpacing || 4.4) * tf + 10)));
-            taSeconds = (totalLines * (window.state.nex || 1)) / (tf * effR * fettePerTR) * (TR / 1000);
+            taSeconds = (totalLines * nex) / (tf * effR * fettePerTR) * (TR / 1000);
             displayedShots = totalLines / (tf * effR);
         }
         
@@ -428,7 +492,7 @@ try {
         const sar = (0.002 * tf * bmi / (TR / 1000)) * Math.pow((window.state.flipAngle || 135) / 180, 2);
 
         const bwHzPx = (window.state.bw || 521) / N_y; 
-        const acqTerm = is3D ? ((window.state.nex || 1) * N_y * N_z) / 14500 : ((window.state.nex || 1) * N_y) / 14500;
+        const acqTerm = is3D ? (nex * N_y * N_z) / 14500 : (nex * N_y) / 14500;
         
         let snrBase = (V_voxel / 0.64) * Math.sqrt(acqTerm) * Math.sqrt(521 / (window.state.bw || 521)) * Math.exp(-TE / 85) * 3.5; 
         
@@ -461,26 +525,21 @@ try {
     };
 
     window.renderSVGPhantom = async function(snrFinal, bwHzPx) {
+        // Assegnazioni livelli di Bloch come da indicazione
         if (window.state.region === 'abdomen') {
-            const[c_liver, c_spleen, c_kidney_c, c_kidney_m, c_muscle, c_fat, c_spine, c_fluid] = await Promise.all([
-                window.fetchSignalFromJava(810, 42, 0.85, null, null, false),
-                window.fetchSignalFromJava(1000, 80, 0.90, null, null, false),
-                window.fetchSignalFromJava(1100, 95, 0.90, null, null, false),
-                window.fetchSignalFromJava(1100, 130, 0.95, null, null, false),
-                window.fetchSignalFromJava(900, 50, 0.80, null, null, false),
-                window.fetchSignalFromJava(250, 80, 1.0, null, null, true),
-                window.fetchSignalFromJava(300, 60, 0.80, null, null, false),
-                window.fetchSignalFromJava(4000, 2000, 1.0, null, null, false)
+            const[c_liver, c_spleen, c_kidney, c_fluid, c_muscle, c_fat, c_spine] = await Promise.all([
+                window.fetchSignalFromJava(810, 42, 0.85, null, null, false), // T1:3, T2:1
+                window.fetchSignalFromJava(1000, 80, 0.90, null, null, false), // T1:2, T2:3
+                window.fetchSignalFromJava(1100, 95, 0.90, null, null, false), // T1:2, T2:3
+                window.fetchSignalFromJava(4000, 2000, 1.0, null, null, false), // Bile T1:0, T2:4
+                window.fetchSignalFromJava(900, 50, 0.80, null, null, false), 
+                window.fetchSignalFromJava(250, 80, 1.0, null, null, true), // Fat T1:4, T2:3
+                window.fetchSignalFromJava(300, 60, 0.80, null, null, false)
             ]);
 
             document.querySelectorAll('[id$="-liver"]').forEach(el => el.setAttribute('fill', c_liver));
             document.querySelectorAll('[id$="-spleen"]').forEach(el => el.setAttribute('fill', c_spleen));
-            document.querySelectorAll('[id$="-kidney-r-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
-            document.querySelectorAll('[id$="-kidney-l-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
-            document.querySelectorAll('[id$="-kidney-r-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
-            document.querySelectorAll('[id$="-kidney-l-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
-            document.querySelectorAll('[id$="-kidney-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
-            document.querySelectorAll('[id$="-kidney-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
+            document.querySelectorAll('[id*="-kidney"]').forEach(el => el.setAttribute('fill', c_kidney));
             document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
             document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
             document.querySelectorAll('[id$="-spine"]').forEach(el => el.setAttribute('fill', c_spine));
@@ -489,28 +548,19 @@ try {
 
             if(document.getElementById('leg-abd-liver')) document.getElementById('leg-abd-liver').style.backgroundColor = c_liver;
             if(document.getElementById('leg-abd-spleen')) document.getElementById('leg-abd-spleen').style.backgroundColor = c_spleen;
-            if(document.getElementById('leg-abd-kidney')) document.getElementById('leg-abd-kidney').style.backgroundColor = c_kidney_c;
+            if(document.getElementById('leg-abd-kidney')) document.getElementById('leg-abd-kidney').style.backgroundColor = c_kidney;
             if(document.getElementById('leg-abd-fat')) document.getElementById('leg-abd-fat').style.backgroundColor = c_fat;
             if(document.getElementById('leg-abd-fluid')) document.getElementById('leg-abd-fluid').style.backgroundColor = c_fluid;
             if(document.getElementById('leg-abd-muscle')) document.getElementById('leg-abd-muscle').style.backgroundColor = c_muscle;
         } 
         else if (window.state.region === 'pelvis') {
-            let t1pz = 1200, t2pz = 130, pdPz = 0.9;
-            let t1tz = 1000, t2tz = 80, pdTz = 0.8;
-            
-            if (window.state.te >= 100) {
-                const edemaFactor = Math.min(2.0, 1.0 + ((window.state.te - 100) / 100)); 
-                t2pz = 180; pdPz = 0.9 * edemaFactor;
-                t2tz = 100; pdTz = 0.8 * edemaFactor;
-            }
-
             const[c_pz, c_tz, c_bladder, c_muscle, c_fat, c_bone, c_rectum] = await Promise.all([
-                window.fetchSignalFromJava(t1pz, t2pz, pdPz, null, null, false),
-                window.fetchSignalFromJava(t1tz, t2tz, pdTz, null, null, false),
-                window.fetchSignalFromJava(3000, 1000, 1.0, null, null, false),
+                window.fetchSignalFromJava(1200, 130, 0.9, null, null, false), // PZ T2:3
+                window.fetchSignalFromJava(1000, 50, 0.8, null, null, false), // TZ T2:1
+                window.fetchSignalFromJava(4000, 2000, 1.0, null, null, false), // Bladder T1:0, T2:4
                 window.fetchSignalFromJava(900, 50, 0.8, null, null, false),
-                window.fetchSignalFromJava(250, 80, 1.0, null, null, true),
-                window.fetchSignalFromJava(2000, 10, 0.1, null, null, false),
+                window.fetchSignalFromJava(250, 80, 1.0, null, null, true), // Fat
+                window.fetchSignalFromJava(2000, 10, 0.1, null, null, false), // Bone
                 window.fetchSignalFromJava(800, 50, 0.5, null, null, false)
             ]);
 
@@ -532,17 +582,16 @@ try {
         }
         else if (window.state.region === 'thorax') {
             const[c_lung, c_heart, c_blood, c_muscle, c_fat, c_spine] = await Promise.all([
-                window.fetchSignalFromJava(1200, 30, 0.2, null, null, false),
-                window.fetchSignalFromJava(900, 50, 0.8, null, null, false),
-                window.fetchSignalFromJava(1200, 50, 0.9, null, null, false), 
+                window.fetchSignalFromJava(2000, 20, 0.1, null, null, false), // Lungs Level 0
+                window.fetchSignalFromJava(900, 50, 0.8, null, null, false), // Heart T1:2, T2:1
+                window.fetchSignalFromJava(2000, 10, 0.1, null, null, false), // Flow void
                 window.fetchSignalFromJava(900, 50, 0.8, null, null, false),
                 window.fetchSignalFromJava(250, 80, 1.0, null, null, true),
                 window.fetchSignalFromJava(300, 60, 0.8, null, null, false)
             ]);
             
             document.querySelectorAll('[id*="-lung"]').forEach(el => el.setAttribute('fill', c_lung));
-            document.querySelectorAll('[id$="-heart"]').forEach(el => el.setAttribute('fill', c_heart));
-            document.querySelectorAll('[id$="-heart-lv"],[id$="-heart-rv"],[id$="-heart-la"], [id$="-heart-ra"]').forEach(el => el.setAttribute('fill', c_heart));
+            document.querySelectorAll('[id$="-heart"], [id$="-heart-lv"], [id$="-heart-rv"], [id$="-heart-la"], [id$="-heart-ra"]').forEach(el => el.setAttribute('fill', c_heart));
             document.querySelectorAll('[id$="-aorta"]').forEach(el => el.setAttribute('fill', c_blood));
             document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
             document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
@@ -551,7 +600,6 @@ try {
 
             if(document.getElementById('leg-tho-lung')) document.getElementById('leg-tho-lung').style.backgroundColor = c_lung;
             if(document.getElementById('leg-tho-heart')) document.getElementById('leg-tho-heart').style.backgroundColor = c_heart;
-            if(document.getElementById('leg-tho-blood')) document.getElementById('leg-tho-blood').style.backgroundColor = c_blood;
             if(document.getElementById('leg-tho-fat')) document.getElementById('leg-tho-fat').style.backgroundColor = c_fat;
         }
         else if (window.state.region === 'head') {
@@ -560,9 +608,9 @@ try {
             const effTE = isT1 ? 15 : window.state.te;
 
             const[c_csf, c_gm, c_wm, c_fat, c_bone] = await Promise.all([
-                window.fetchSignalFromJava(4000, 2000, 1.0, effTR, effTE, false),
-                window.fetchSignalFromJava(1200, 100, 0.85, effTR, effTE, false),
-                window.fetchSignalFromJava(600, 80, 0.75, effTR, effTE, false),
+                window.fetchSignalFromJava(4000, 2000, 1.0, effTR, effTE, false), // CSF T1:0, T2:4
+                window.fetchSignalFromJava(1200, 100, 0.85, effTR, effTE, false), // GM T1:2, T2:2
+                window.fetchSignalFromJava(600, 80, 0.75, effTR, effTE, false), // WM T1:3, T2:1
                 window.fetchSignalFromJava(250, 80, 1.0, effTR, effTE, true),
                 window.fetchSignalFromJava(2000, 10, 0.1, effTR, effTE, false)
             ]);
@@ -604,8 +652,10 @@ try {
         });
     };
 
-    document.addEventListener('DOMContentLoaded', () => { 
+    // 5. INIZIALIZZAZIONE SICURA AL CARICAMENTO DEL DOM
+    window.addEventListener('DOMContentLoaded', () => { 
         document.getElementById('login-btn')?.addEventListener('click', window.checkPassword);
+        // Non chiamiamo switchTab() né calculatePhysics() qui per evitare calcoli a vuoto dietro il login
     });
 
 } catch(e) {

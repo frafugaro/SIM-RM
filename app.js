@@ -4,7 +4,7 @@ window.state = {
     slabGroup: '1', slabs: '1', slices: 60, position: '0.0', orientation: 'Transversal', phaseEncDir: 'R >> L',
     phaseOS: 30.0, sliceOS: 5.0, fovRead: 220.0, fovPhasePct: 100.0, sliceThick: 1.0, tr: 2200.0, te: 105.0, nex: 1.8, conc: 1,
     autoAlign: 'Head > Brain', coilElements: 'BO2,3;SP4,5',
-    flipAngle: 135.0, saturation: 'Nessuna', darkBlood: false, bloodSuppression: 'Off',
+    flipAngle: 135.0, saturation: 'Standard', darkBlood: false, bloodSuppression: 'Off',
     dynamicMode: 'Standard', measurements: 1.0, multipleSeries: 'Each Measurement', reordering: 'Linear',
     baseRes: 320, phaseResPct: 91.0, sliceResPct: 81.0, interp: '1',
     accelType: 'GRAPPA', accelR: 4.0, refScans: 'GRE/Separate', accelPE: 2.0, refLinesPE: 24, accel3D: 2.0, refLines3D: 24,
@@ -215,7 +215,6 @@ window.switchTab = function(tabKey) {
 window.updateState = function(key, value) {
     if (['dimension', 'orientation', 'saturation', 'accelType', 'region'].includes(key)) {
         state[key] = value;
-        // Solo per questi select aggiorniamo il layout
         if(['dimension', 'accelType'].includes(key)) {
             window.calculatePhysics();
             const activeTab = document.querySelector('.tab-btn.active');
@@ -545,7 +544,7 @@ window.renderSVGPhantom = async function(snrFinal, bwHzPx) {
         
         document.querySelectorAll('[id*="-lung"]').forEach(el => el.setAttribute('fill', c_lung));
         document.querySelectorAll('[id$="-heart"]').forEach(el => el.setAttribute('fill', c_heart));
-        document.querySelectorAll('[id$="-heart-lv"], [id$="-heart-rv"],[id$="-heart-la"], [id$="-heart-ra"]').forEach(el => el.setAttribute('fill', c_heart));
+        document.querySelectorAll('[id$="-heart-lv"],[id$="-heart-rv"],[id$="-heart-la"], [id$="-heart-ra"]').forEach(el => el.setAttribute('fill', c_heart));
         document.querySelectorAll('[id$="-aorta"]').forEach(el => el.setAttribute('fill', c_blood));
         document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
         document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
@@ -584,19 +583,19 @@ window.renderSVGPhantom = async function(snrFinal, bwHzPx) {
         if(document.getElementById('leg-hd-bone')) document.getElementById('leg-hd-bone').style.backgroundColor = c_bone;
     }
 
-    let baseNoise = Math.max(0, (1.0 - snrFinal) * 0.3);
+    let baseNoiseOpacity = Math.max(0, (1.0 - snrFinal) * 0.3);
     let gFactorOpacity = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
     
     if (state.accelType === 'CS') {
         const cleanFactor = state.csFactor * 0.05;
-        baseNoise = Math.max(0, baseNoise - cleanFactor);
+        baseNoiseOpacity = Math.max(0, baseNoiseOpacity - cleanFactor);
         gFactorOpacity = Math.max(0, gFactorOpacity - cleanFactor);
         document.getElementById('phantom-container').style.filter = `grayscale(100%) blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
     } else {
         document.getElementById('phantom-container').style.filter = 'grayscale(100%)';
     }
 
-    document.getElementById('ph-noise').setAttribute('opacity', baseNoise);
+    document.getElementById('ph-noise').setAttribute('opacity', baseNoiseOpacity);
     document.getElementById('ph-noise-gfactor').setAttribute('opacity', gFactorOpacity);
 
     const shiftPx = bwHzPx < 100 ? 3 : (bwHzPx <= 250 ? 1 : 0);

@@ -1,103 +1,306 @@
-<svg viewBox="0 0 200 200" class="w-full h-full preserve-3d">
-    <defs>
-        <filter id="mri-noise"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 1 0" /></filter>
-        <mask id="gfactor-mask">
-            <radialGradient id="gfactor-grad" cx="50%" cy="50%" r="45%">
-                <stop offset="0%" stop-color="white" stop-opacity="1" />
-                <stop offset="100%" stop-color="white" stop-opacity="0" />
-            </radialGradient>
-            <rect x="0" y="0" width="200" height="200" fill="url(#gfactor-grad)" />
-        </mask>
-        <filter id="texture-spongy"><feTurbulence type="fractalNoise" baseFrequency="0.15" numOctaves="3" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0" in2="SourceGraphic" operator="in"/></filter>
-        <filter id="texture-parenchyma"><feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="2" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.2 0" in2="SourceGraphic" operator="in"/></filter>
-    </defs>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore di Sequenze RM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .tab-btn.active { background-color: #1e293b; border-left-color: #3b82f6; color: #ffffff; }
+        .texture-lung { filter: url(#texture-spongy); }
+        .texture-bowel { filter: url(#texture-bubbles); }
+        .texture-brain { filter: url(#texture-parenchyma); }
+    </style>
+</head>
+<body class="h-screen bg-slate-900 text-slate-300 font-sans flex flex-col overflow-hidden text-sm">
 
-    <!-- 1. ABDOME AXIAL & CORONAL -->
-    <g id="ph-group-abdomen-axial" class="hidden">
-        <!-- Grasso e Muscolo esterni -->
-        <path id="ph-abd-fat" d="M 10 100 C 10 30, 190 30, 190 100 C 190 160, 150 180, 100 180 C 50 180, 10 160, 10 100 Z" class="transition-colors duration-300"/>
-        <path id="ph-abd-muscle" d="M 20 100 C 20 40, 180 40, 180 100 C 180 150, 140 170, 100 170 C 60 170, 20 150, 20 100 Z" class="transition-colors duration-300 transform-water"/>
-        
-        <!-- Fegato (Complesso) -->
-        <path id="ph-abd-liver" d="M 22 95 C 22 50, 80 40, 105 48 C 115 51, 128 65, 115 85 C 105 100, 90 135, 45 140 C 25 142, 22 115, 22 95 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-        
-        <!-- Milza (Crescente) -->
-        <path id="ph-abd-spleen" d="M 175 90 C 178 65, 155 50, 140 58 C 130 63, 132 80, 142 98 C 150 110, 168 115, 175 90 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-        
-        <!-- Reni (Anatomia Corticale/Midollare a fagiolo) -->
-        <g class="transform-water">
-            <path id="ph-abd-kidney-r-cortex" d="M 38 140 C 33 125, 48 110, 60 115 C 68 118, 72 135, 62 148 C 50 158, 42 155, 38 140 Z" class="transition-colors duration-300"/>
-            <path id="ph-abd-kidney-r-medulla" d="M 45 135 C 42 125, 52 118, 58 122 C 63 125, 65 135, 58 142 C 52 147, 47 145, 45 135 Z" class="transition-colors duration-300"/>
-            
-            <path id="ph-abd-kidney-l-cortex" d="M 162 140 C 167 125, 152 110, 140 115 C 132 118, 128 135, 138 148 C 150 158, 158 155, 162 140 Z" class="transition-colors duration-300"/>
-            <path id="ph-abd-kidney-l-medulla" d="M 155 135 C 158 125, 148 118, 142 122 C 137 125, 135 135, 142 142 C 148 147, 153 145, 155 135 Z" class="transition-colors duration-300"/>
-        </g>
+    <!-- SCHERMATA LOGIN -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center transition-opacity duration-500">
+        <div class="bg-slate-900 border border-slate-700 p-8 rounded-lg shadow-2xl flex flex-col items-center gap-4 w-80">
+            <div class="w-12 h-12 bg-blue-600 text-white font-bold flex items-center justify-center rounded-lg text-2xl mb-2">S</div>
+            <h2 class="text-xl font-bold text-slate-100 text-center">SIMULATORE RM</h2>
+            <p class="text-xs text-slate-400 text-center mb-4">Inserisci la password di accesso per continuare.</p>
+            <input type="password" id="login-pwd" class="w-full bg-slate-950 border border-slate-600 rounded p-2 text-center text-slate-200 focus:border-blue-500 outline-none" placeholder="Password">
+            <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors uppercase tracking-wider text-xs mt-2">Accedi</button>
+            <p id="login-err" class="text-red-400 text-xs hidden mt-2">Password errata!</p>
+        </div>
+    </div>
 
-        <!-- Strutture Vascolari e Ossee -->
-        <path id="ph-abd-spine" d="M 88 155 C 88 145, 112 145, 112 155 C 112 168, 88 168, 88 155 Z" class="transition-colors duration-300 transform-water texture-spongy"/>
-        <circle cx="92" cy="138" r="6" fill="#000" class="transform-water"/> <!-- IVC -->
-        <circle cx="108" cy="136" r="7" fill="#000" class="transform-water"/> <!-- Aorta -->
-    </g>
+    <!-- HEADER & SEARCH -->
+    <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center shrink-0 relative z-40">
+        <div class="flex items-center gap-4">
+            <div class="w-7 h-7 bg-blue-600 text-white font-bold flex items-center justify-center rounded-sm">S</div>
+            <div>
+                <h1 class="text-base font-bold text-slate-100 tracking-wide">SIMULATORE DI SEQUENZE RM</h1>
+                <p class="text-xs text-slate-500">Vida 3T Advanced Physics & Acceleration Engine</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div id="alert-banner" class="hidden bg-red-900/50 border border-red-500 text-red-200 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                Sotto-Soglia Diagnostica
+            </div>
+            <div class="relative">
+                <input type="text" id="quick-search" placeholder="Search Parameter..." class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500 w-56 placeholder-slate-500">
+                <div id="search-results" class="absolute top-full right-0 mt-1 w-64 max-h-64 overflow-y-auto bg-slate-900 border border-slate-700 rounded shadow-2xl hidden flex-col z-50"></div>
+            </div>
+        </div>
+    </header>
 
-    <!-- 2. PELVI / PROSTATA AXIAL -->
-    <g id="ph-group-pelvis-axial" class="hidden">
-        <path id="ph-pelvis-fat" d="M 15 90 C 15 30, 185 30, 185 90 C 185 170, 150 190, 100 190 C 50 190, 15 170, 15 90 Z" class="transition-colors duration-300"/>
-        <path id="ph-pelvis-muscle" d="M 25 90 C 25 40, 175 40, 175 90 C 175 150, 140 180, 100 180 C 60 180, 25 150, 25 90 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-        
-        <!-- Ossa Coxali (Corticale densa) -->
-        <path id="ph-pelvis-bone-l" d="M 25 90 C 25 60, 50 50, 55 60 C 45 80, 40 120, 60 140 C 45 150, 25 130, 25 90 Z" class="transition-colors duration-300" />
-        <path id="ph-pelvis-bone-r" d="M 175 90 C 175 60, 150 50, 145 60 C 155 80, 160 120, 140 140 C 155 150, 175 130, 175 90 Z" class="transition-colors duration-300" />
-        
-        <!-- Retto -->
-        <path id="ph-pelvis-rectum" d="M 85 150 C 85 135, 115 135, 115 150 C 115 170, 85 170, 85 150 Z" class="transition-colors duration-300 transform-water"/>
-        <circle cx="100" cy="150" r="5" fill="#000" class="transform-water"/> <!-- Lume/Aria -->
-        
-        <!-- Vescica Anteriore -->
-        <path id="ph-bladder" d="M 65 60 C 65 35, 135 35, 135 60 C 140 85, 120 100, 100 100 C 80 100, 60 85, 65 60 Z" class="transition-colors duration-300 transform-water"/>
-        
-        <!-- Prostata Dettagliata -->
-        <path id="ph-prostate-capsule" d="M 75 115 C 75 95, 125 95, 125 115 C 130 140, 115 145, 100 145 C 85 145, 70 140, 75 115 Z" class="transition-colors duration-300 transform-water"/>
-        <path id="ph-prostate-pz" d="M 78 115 C 78 100, 122 100, 122 115 C 126 135, 112 140, 100 140 C 88 140, 74 135, 78 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-        <path id="ph-prostate-tz" d="M 88 115 C 88 105, 112 105, 112 115 C 114 125, 106 130, 100 130 C 94 130, 86 125, 88 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-        <circle id="ph-prostate-urethra" cx="100" cy="115" r="2" fill="#000" class="transform-water"/>
-    </g>
+    <div class="flex flex-1 overflow-hidden relative z-0">
+        <!-- SIDEBAR -->
+        <aside class="w-48 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto" id="sidebar-tabs">
+            <button class="tab-btn active p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="routine">Routine</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="contrast">Contrast</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="resolution">Resolution</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="geometry">Geometry</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="system">System</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="physio">Physio</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="sequence">Sequence</button>
+        </aside>
 
-    <!-- 3. THORAX AXIAL -->
-    <g id="ph-group-thorax-axial" class="hidden">
-        <path id="ph-thorax-fat" d="M 10 100 C 10 40, 190 40, 190 100 C 190 160, 150 180, 100 180 C 50 180, 10 160, 10 100 Z" class="transition-colors duration-300"/>
-        <path id="ph-thorax-muscle" d="M 20 100 C 20 50, 180 50, 180 100 C 180 150, 140 170, 100 170 C 60 170, 20 150, 20 100 Z" class="transition-colors duration-300 transform-water"/>
-        
-        <!-- Polmoni -->
-        <path id="ph-thorax-lungs-r" d="M 25 100 C 25 60, 55 50, 85 55 C 85 85, 75 135, 85 155 C 50 150, 25 135, 25 100 Z" class="transition-colors duration-300 transform-water texture-lung"/>
-        <path id="ph-thorax-lungs-l" d="M 175 100 C 175 60, 145 50, 115 55 C 115 85, 125 135, 115 155 C 150 150, 175 135, 175 100 Z" class="transition-colors duration-300 transform-water texture-lung"/>
-        
-        <!-- Cuore a 4 Camere -->
-        <path id="ph-thorax-heart" d="M 75 95 C 75 65, 125 65, 125 95 C 125 125, 100 135, 75 110 Z" class="transition-colors duration-300 transform-water"/>
-        <!-- Camere Sanguigne (Dark Blood / Fluid) -->
-        <path id="ph-thorax-blood-rv" d="M 85 80 C 85 65, 100 65, 100 80 C 100 90, 85 90, 85 80 Z" class="transition-colors duration-300 transform-water"/>
-        <path id="ph-thorax-blood-lv" d="M 105 85 C 105 70, 120 70, 120 85 C 120 105, 105 105, 105 85 Z" class="transition-colors duration-300 transform-water"/>
-        <path id="ph-thorax-blood-ra" d="M 80 100 C 80 90, 95 90, 95 100 C 95 110, 80 110, 80 100 Z" class="transition-colors duration-300 transform-water"/>
-        <path id="ph-thorax-blood-la" d="M 100 105 C 100 95, 115 95, 115 105 C 115 115, 100 115, 100 105 Z" class="transition-colors duration-300 transform-water"/>
-        
-        <circle id="ph-thorax-aorta" cx="102" cy="130" r="8" class="transition-colors duration-300 transform-water"/> 
-        <path id="ph-thorax-spine" d="M 90 155 C 90 145, 110 145, 110 155 C 110 165, 90 165, 90 155 Z" class="transition-colors duration-300 transform-water texture-spongy"/>
-    </g>
+        <!-- MAIN PANEL -->
+        <main class="flex-1 overflow-y-auto p-4 flex flex-col xl:flex-row gap-4 bg-slate-900">
+            <div class="flex-1 bg-slate-800 border border-slate-700 rounded-md p-4" id="parameters-container"></div>
 
-    <!-- 4. HEAD AXIAL -->
-    <g id="ph-group-head-axial" class="hidden">
-        <path id="ph-brain-fat" d="M 25 100 C 25 40, 175 40, 175 100 C 175 160, 150 185, 100 185 C 50 185, 25 160, 25 100 Z" class="transition-colors duration-300"/>
-        <path id="ph-brain-bone" d="M 32 100 C 32 45, 168 45, 168 100 C 168 155, 145 178, 100 178 C 55 178, 32 155, 32 100 Z" class="transition-colors duration-300 transform-water"/>
-        
-        <!-- Sostanza Grigia (Corticale Corrugata) -->
-        <path id="ph-brain-gray" d="M 38 100 Q 40 80 45 70 Q 50 50 70 45 Q 100 40 130 45 Q 150 50 155 70 Q 160 80 162 100 Q 160 130 145 150 Q 130 165 100 168 Q 70 165 55 150 Q 40 130 38 100 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-        
-        <!-- Sostanza Bianca -->
-        <path id="ph-brain-white" d="M 50 100 C 50 65, 80 50, 100 50 C 120 50, 150 65, 150 100 C 150 135, 125 155, 100 155 C 75 155, 50 135, 50 100 Z" class="transition-colors duration-300 transform-water"/>
-        
-        <!-- Ventricoli e CSF (Forma a farfalla) -->
-        <path id="ph-brain-csf" d="M 95 85 Q 100 60 105 85 Q 120 105 105 125 L 100 115 L 95 125 Q 80 105 95 85 Z" class="transition-colors duration-300 transform-water"/>
-    </g>
-    
-    <rect id="ph-noise" x="0" y="0" width="200" height="200" filter="url(#mri-noise)" opacity="0" style="mix-blend-mode: screen; pointer-events: none; transition: opacity 0.3s;" />
-    <rect id="ph-noise-gfactor" x="0" y="0" width="200" height="200" filter="url(#mri-noise)" mask="url(#gfactor-mask)" opacity="0" style="mix-blend-mode: screen; pointer-events: none; transition: opacity 0.3s;" />
-</svg>
+            <!-- PHANTOM & PATIENT DATA -->
+            <div class="w-full xl:w-80 flex flex-col gap-4 shrink-0">
+                <div class="bg-slate-800 border border-slate-700 rounded-md p-4">
+                    <h3 class="text-xs font-bold uppercase text-slate-400 mb-3 border-b border-slate-700 pb-1">Setup Paziente & Regione</h3>
+                    <div class="mb-3">
+                        <label class="block text-xs text-slate-500 mb-1">Distretto Anatomico</label>
+                        <select id="phantom-region" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-slate-200 outline-none focus:border-blue-500 text-xs">
+                            <option value="abdomen">Addome Superiore</option>
+                            <option value="pelvis">Pelvi / Prostata</option>
+                            <option value="thorax">Torace</option>
+                            <option value="head">Encefalo</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">Peso (kg)</label>
+                            <input type="number" id="pat-weight" value="75" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-200 outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 mb-1">Altezza (cm)</label>
+                            <input type="number" id="pat-height" value="175" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-200 outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SVG PHANTOM VIEWER -->
+                <div class="bg-black border border-slate-700 rounded-md p-4 flex flex-col items-center justify-center relative flex-1 min-h-[300px]">
+                    <span id="phantom-title" class="absolute top-2 left-2 text-[10px] text-slate-500 uppercase tracking-widest z-10">Axial Abdomen</span>
+                    
+                    <div id="phantom-container" class="relative w-full aspect-square border border-slate-800 bg-black transition-all duration-300 overflow-hidden">
+                        <svg viewBox="0 0 200 200" class="w-full h-full preserve-3d">
+                            <defs>
+                                <filter id="mri-noise"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 1 0" /></filter>
+                                <mask id="gfactor-mask">
+                                    <radialGradient id="gfactor-grad" cx="50%" cy="50%" r="45%">
+                                        <stop offset="0%" stop-color="white" stop-opacity="1" />
+                                        <stop offset="100%" stop-color="white" stop-opacity="0" />
+                                    </radialGradient>
+                                    <rect x="0" y="0" width="200" height="200" fill="url(#gfactor-grad)" />
+                                </mask>
+                                <filter id="texture-spongy"><feTurbulence type="fractalNoise" baseFrequency="0.15" numOctaves="3" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0" in2="SourceGraphic" operator="in"/></filter>
+                                <filter id="texture-bubbles"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.6 0" in2="SourceGraphic" operator="in"/></filter>
+                                <filter id="texture-parenchyma"><feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="2" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.2 0" in2="SourceGraphic" operator="in"/></filter>
+                            </defs>
+
+                            <!-- ========================================== -->
+                            <!-- ADDOME SUPERIORE -->
+                            <!-- ========================================== -->
+                            <g id="ph-group-abdomen-axial" class="hidden">
+                                <path id="ph-abd-ax-fat" d="M 10 100 C 10 30, 190 30, 190 100 C 190 160, 150 180, 100 180 C 50 180, 10 160, 10 100 Z" class="transition-colors duration-300"/>
+                                <path id="ph-abd-ax-muscle" d="M 20 100 C 20 40, 180 40, 180 100 C 180 150, 140 170, 100 170 C 60 170, 20 150, 20 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-ax-liver" d="M 22 95 C 22 55, 85 45, 105 50 C 120 54, 125 65, 115 80 C 110 90, 85 130, 45 135 C 25 138, 22 115, 22 95 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-abd-ax-spleen" d="M 175 90 C 178 70, 160 55, 145 60 C 135 65, 138 80, 145 95 C 150 105, 165 115, 175 90 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-abd-ax-kidney-r-cortex" d="M 40 140 C 35 125, 45 115, 55 115 C 65 115, 70 130, 60 145 C 50 155, 45 155, 40 140 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-ax-kidney-r-medulla" d="M 45 135 C 43 125, 48 120, 52 120 C 58 120, 60 130, 55 140 C 50 145, 48 145, 45 135 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-ax-kidney-l-cortex" d="M 160 140 C 165 125, 155 115, 145 115 C 135 115, 130 130, 140 145 C 150 155, 155 155, 160 140 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-ax-kidney-l-medulla" d="M 155 135 C 157 125, 152 120, 148 120 C 142 120, 140 130, 145 140 C 150 145, 152 145, 155 135 Z" class="transition-colors duration-300 transform-water"/>
+                                <circle id="ph-abd-ax-spine" cx="100" cy="155" r="14" class="transition-colors duration-300 transform-water texture-spongy"/>
+                            </g>
+
+                            <g id="ph-group-abdomen-coronal" class="hidden">
+                                <path id="ph-abd-cor-fat" d="M 15 20 C 15 10, 185 10, 185 20 L 185 180 C 185 190, 15 190, 15 180 Z" class="transition-colors duration-300"/>
+                                <path id="ph-abd-cor-muscle" d="M 22 25 C 22 18, 178 18, 178 25 L 178 175 C 178 182, 22 182, 22 175 Z" class="transition-colors duration-300 transform-water"/>
+                                <rect id="ph-abd-cor-spine" x="90" y="15" width="20" height="170" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <path id="ph-abd-cor-liver" d="M 25 40 C 25 15, 85 15, 90 40 C 90 95, 75 130, 25 130 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-abd-cor-spleen" d="M 175 50 C 175 25, 140 35, 135 60 C 130 85, 155 95, 175 80 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-abd-cor-kidney-r-cortex" d="M 40 100 C 40 85, 65 85, 70 105 C 75 130, 50 140, 40 120 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-cor-kidney-r-medulla" d="M 45 105 C 45 95, 60 95, 63 105 C 65 120, 50 125, 45 115 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-cor-kidney-l-cortex" d="M 160 100 C 160 85, 135 85, 130 105 C 125 130, 150 140, 160 120 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-cor-kidney-l-medulla" d="M 155 105 C 155 95, 140 95, 137 105 C 135 120, 150 125, 155 115 Z" class="transition-colors duration-300 transform-water"/>
+                            </g>
+
+                            <g id="ph-group-abdomen-sagittal" class="hidden">
+                                <path id="ph-abd-sag-fat" d="M 25 15 C 5 60, 5 140, 25 185 L 175 185 C 185 140, 185 60, 175 15 Z" class="transition-colors duration-300"/>
+                                <path id="ph-abd-sag-muscle" d="M 33 23 C 15 60, 15 140, 33 177 L 167 177 C 175 140, 175 60, 167 23 Z" class="transition-colors duration-300 transform-water"/>
+                                <rect id="ph-abd-sag-spine" x="145" y="15" width="20" height="170" rx="3" ry="3" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <path id="ph-abd-sag-liver" d="M 33 25 C 85 15, 135 25, 135 55 C 135 105, 80 120, 33 120 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-abd-sag-kidney-cortex" d="M 100 80 C 100 70, 135 70, 135 100 C 135 130, 100 140, 100 110 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-abd-sag-kidney-medulla" d="M 105 85 C 105 78, 125 78, 125 95 C 125 115, 105 125, 105 105 Z" class="transition-colors duration-300 transform-water"/>
+                            </g>
+
+                            <!-- ========================================== -->
+                            <!-- PELVI / PROSTATA -->
+                            <!-- ========================================== -->
+                            <g id="ph-group-pelvis-axial" class="hidden">
+                                <path id="ph-pelvis-ax-fat" d="M 15 90 C 15 30, 185 30, 185 90 C 185 170, 150 190, 100 190 C 50 190, 15 170, 15 90 Z" class="transition-colors duration-300"/>
+                                <path id="ph-pelvis-ax-muscle" d="M 25 90 C 25 40, 175 40, 175 90 C 175 150, 140 180, 100 180 C 60 180, 25 150, 25 90 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-pelvis-ax-bone" d="M 25 90 C 25 60, 50 50, 55 60 C 45 80, 40 120, 60 140 C 45 150, 25 130, 25 90 M 175 90 C 175 60, 150 50, 145 60 C 155 80, 160 120, 140 140 C 155 150, 175 130, 175 90 Z" class="transition-colors duration-300" />
+                                <path id="ph-pelvis-ax-rectum" d="M 85 150 C 85 135, 115 135, 115 150 C 115 170, 85 170, 85 150 Z" class="transition-colors duration-300 transform-water texture-bowel"/>
+                                <path id="ph-pelvis-ax-bladder" d="M 65 60 C 65 35, 135 35, 135 60 C 140 85, 120 100, 100 100 C 80 100, 60 85, 65 60 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-ax-prostate-capsule" d="M 75 115 C 75 95, 125 95, 125 115 C 130 140, 115 145, 100 145 C 85 145, 70 140, 75 115 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-ax-prostate-pz" d="M 78 115 C 78 100, 122 100, 122 115 C 126 135, 112 140, 100 140 C 88 140, 74 135, 78 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-pelvis-ax-prostate-tz" d="M 88 115 C 88 105, 112 105, 112 115 C 114 125, 106 130, 100 130 C 94 130, 86 125, 88 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <circle cx="100" cy="115" r="2" fill="#000" class="transform-water"/> <!-- Urethra -->
+                            </g>
+
+                            <g id="ph-group-pelvis-coronal" class="hidden">
+                                <path id="ph-pelvis-cor-fat" d="M 15 20 C 15 10, 185 10, 185 20 L 185 180 C 185 190, 15 190, 15 180 Z" class="transition-colors duration-300"/>
+                                <path id="ph-pelvis-cor-muscle" d="M 25 100 Q 100 160 175 100 L 175 190 L 25 190 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <circle id="ph-pelvis-cor-bone-l" cx="35" cy="120" r="26" class="transition-colors duration-300 transform-water"/>
+                                <circle id="ph-pelvis-cor-bone-r" cx="165" cy="120" r="26" class="transition-colors duration-300 transform-water"/>
+                                <ellipse id="ph-pelvis-cor-bladder" cx="100" cy="65" rx="40" ry="30" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-cor-sv" d="M 75 95 C 70 85, 90 85, 100 95 C 110 85, 130 85, 125 95 C 120 110, 80 110, 75 95 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <ellipse id="ph-pelvis-cor-prostate-pz" cx="100" cy="120" rx="24" ry="20" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <ellipse id="ph-pelvis-cor-prostate-tz" cx="100" cy="118" rx="14" ry="12" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                            </g>
+
+                            <g id="ph-group-pelvis-sagittal" class="hidden">
+                                <path id="ph-pelvis-sag-fat" d="M 20 10 C 10 60, 10 140, 50 190 C 80 200, 130 190, 160 180 C 180 140, 180 60, 170 10 Z" class="transition-colors duration-300"/>
+                                <path id="ph-pelvis-sag-muscle" d="M 30 140 C 50 180, 120 180, 150 140 L 150 100 C 120 130, 50 130, 30 100 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-pelvis-sag-spine" d="M 145 10 C 135 50, 150 100, 125 150 L 140 160 C 165 100, 155 50, 165 10 Z" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <ellipse id="ph-pelvis-sag-bone" cx="45" cy="130" rx="10" ry="20" transform="rotate(20 45 130)" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-sag-rectum" d="M 120 60 C 115 100, 130 130, 110 160 L 120 165 C 140 130, 125 100, 130 60 Z" class="transition-colors duration-300 transform-water texture-bowel"/>
+                                <path id="ph-pelvis-sag-bladder" d="M 55 100 C 55 60, 105 60, 105 100 C 105 125, 80 135, 55 125 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-sag-prostate-capsule" d="M 80 135 C 80 120, 110 120, 110 135 C 110 155, 95 160, 80 155 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-sag-prostate-pz" d="M 82 135 C 82 122, 108 122, 108 135 C 108 152, 95 156, 82 152 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                                <path id="ph-pelvis-sag-prostate-tz" d="M 85 135 C 85 127, 102 127, 102 135 C 102 145, 95 148, 85 145 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
+                            </g>
+
+                            <!-- ========================================== -->
+                            <!-- TORACE -->
+                            <!-- ========================================== -->
+                            <g id="ph-group-thorax-axial" class="hidden">
+                                <path id="ph-tho-ax-fat" d="M 10 100 C 10 30, 190 30, 190 100 C 190 160, 150 180, 100 180 C 50 180, 10 160, 10 100 Z" class="transition-colors duration-300"/>
+                                <path id="ph-tho-ax-muscle" d="M 20 100 C 20 40, 180 40, 180 100 C 180 150, 140 170, 100 170 C 60 170, 20 150, 20 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-tho-ax-lungs" d="M 25 100 C 25 50, 50 40, 85 45 C 85 85, 75 135, 85 155 C 50 150, 25 135, 25 100 M 175 100 C 175 50, 150 40, 115 45 C 115 85, 125 135, 115 155 C 150 150, 175 135, 175 100 Z" class="transition-colors duration-300 transform-water texture-lung"/>
+                                <path id="ph-tho-ax-heart" d="M 85 85 C 85 60, 115 60, 115 85 C 115 110, 85 110, 85 85 M 90 105 C 90 90, 110 90, 110 105 C 110 120, 90 120, 90 105 Z" class="transition-colors duration-300 transform-water"/>
+                                <circle id="ph-tho-ax-aorta" cx="102" cy="130" r="8" class="transition-colors duration-300 transform-water"/> 
+                                <circle id="ph-tho-ax-spine" cx="100" cy="155" r="14" class="transition-colors duration-300 transform-water texture-spongy"/>
+                            </g>
+
+                            <g id="ph-group-thorax-sagittal" class="hidden">
+                                <path id="ph-tho-sag-fat" d="M 30 10 C 10 60, 10 140, 30 190 L 170 190 C 180 140, 180 60, 170 10 Z" class="transition-colors duration-300"/>
+                                <path id="ph-tho-sag-muscle" d="M 38 18 C 20 60, 20 140, 38 182 L 162 182 C 170 140, 170 60, 162 18 Z" class="transition-colors duration-300 transform-water"/>
+                                <rect id="ph-tho-sag-spine" x="140" y="10" width="18" height="180" rx="4" ry="4" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <path id="ph-tho-sag-lungs" d="M 50 25 C 105 20, 135 25, 135 165 C 95 165, 50 135, 50 25 Z" class="transition-colors duration-300 transform-water texture-lung"/>
+                                <path id="ph-tho-sag-heart" d="M 60 110 C 60 70, 120 80, 120 120 C 120 150, 70 150, 60 110 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-tho-sag-aorta" d="M 90 60 C 90 40, 110 40, 110 60" fill="none" stroke-width="8" class="transition-colors duration-300 transform-water"/>
+                            </g>
+
+                            <!-- ========================================== -->
+                            <!-- ENCEFALO -->
+                            <!-- ========================================== -->
+                            <g id="ph-group-head-axial" class="hidden">
+                                <path id="ph-brain-ax-fat" d="M 25 100 C 25 40, 175 40, 175 100 C 175 160, 150 185, 100 185 C 50 185, 25 160, 25 100 Z" class="transition-colors duration-300"/>
+                                <path id="ph-brain-ax-bone" d="M 32 100 C 32 45, 168 45, 168 100 C 168 155, 145 178, 100 178 C 55 178, 32 155, 32 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-brain-ax-gray" d="M 40 100 C 40 55, 75 40, 100 40 C 125 40, 160 55, 160 100 C 160 145, 135 168, 100 168 C 65 168, 40 145, 40 100 Z" class="transition-colors duration-300 transform-water texture-brain"/>
+                                <path id="ph-brain-ax-white" d="M 50 100 C 50 65, 80 50, 100 50 C 120 50, 150 65, 150 100 C 150 135, 125 155, 100 155 C 75 155, 50 135, 50 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-brain-ax-csf" d="M 90 80 Q 100 50 110 80 Q 120 110 105 130 L 100 120 L 95 130 Q 80 110 90 80 Z" class="transition-colors duration-300 transform-water"/>
+                            </g>
+
+                            <g id="ph-group-head-sagittal" class="hidden">
+                                <path id="ph-brain-sag-fat" d="M 15 100 C 15 20, 180 20, 180 100 C 180 180, 120 195, 80 195 C 15 195, 15 150, 15 100 Z" class="transition-colors duration-300"/>
+                                <path id="ph-brain-sag-bone" d="M 22 100 C 22 27, 173 27, 173 100 C 173 173, 117 188, 80 188 C 22 188, 22 150, 22 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-brain-sag-gray" d="M 32 100 C 32 38, 160 38, 160 100 C 160 145, 115 155, 80 155 C 45 155, 32 135, 32 100 Z" class="transition-colors duration-300 transform-water texture-brain"/>
+                                <path id="ph-brain-sag-white" d="M 42 100 C 42 50, 145 50, 145 100 C 145 135, 112 145, 80 145 C 55 145, 42 125, 42 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-brain-sag-csf" d="M 80 90 Q 100 85 110 95 Q 105 105 90 100 Z" class="transition-colors duration-300 transform-water"/>
+                            </g>
+                            
+                            <!-- NOISE & G-FACTOR LAYER -->
+                            <rect id="ph-noise" x="0" y="0" width="200" height="200" filter="url(#mri-noise)" opacity="0" style="mix-blend-mode: screen; pointer-events: none; transition: opacity 0.3s;" />
+                            <rect id="ph-noise-gfactor" x="0" y="0" width="200" height="200" filter="url(#mri-noise)" mask="url(#gfactor-mask)" opacity="0" style="mix-blend-mode: screen; pointer-events: none; transition: opacity 0.3s;" />
+                        </svg>
+                    </div>
+
+                    <!-- LEGENDE DINAMICHE -->
+                    <div id="legend-abdomen" class="mt-4 grid grid-cols-2 gap-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
+                        <div class="flex items-center gap-1"><div id="leg-abd-liver" class="w-2 h-2"></div> Fegato</div>
+                        <div class="flex items-center gap-1"><div id="leg-abd-spleen" class="w-2 h-2"></div> Milza</div>
+                        <div class="flex items-center gap-1"><div id="leg-abd-kidney" class="w-2 h-2"></div> Reni</div>
+                        <div class="flex items-center gap-1"><div id="leg-abd-fat" class="w-2 h-2"></div> Grasso</div>
+                    </div>
+
+                    <div id="legend-pelvis" class="mt-4 grid grid-cols-2 gap-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
+                        <div class="flex items-center gap-1"><div id="leg-pelvis-pz" class="w-2 h-2"></div> Prostata (PZ)</div>
+                        <div class="flex items-center gap-1"><div id="leg-pelvis-tz" class="w-2 h-2"></div> Prostata (TZ)</div>
+                        <div class="flex items-center gap-1"><div id="leg-pelvis-bladder" class="w-2 h-2"></div> Vescica</div>
+                        <div class="flex items-center gap-1"><div id="leg-pelvis-fat" class="w-2 h-2"></div> Grasso</div>
+                    </div>
+
+                    <div id="legend-thorax" class="mt-4 grid grid-cols-2 gap-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
+                        <div class="flex items-center gap-1"><div id="leg-tho-lung" class="w-2 h-2"></div> Polmoni</div>
+                        <div class="flex items-center gap-1"><div id="leg-tho-heart" class="w-2 h-2"></div> Miocardio/Sangue</div>
+                        <div class="flex items-center gap-1"><div id="leg-tho-muscle" class="w-2 h-2"></div> Muscolo</div>
+                        <div class="flex items-center gap-1"><div id="leg-tho-fat" class="w-2 h-2"></div> Grasso</div>
+                    </div>
+
+                    <div id="legend-head" class="mt-4 grid grid-cols-2 gap-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
+                        <div class="flex items-center gap-1"><div id="leg-hd-csf" class="w-2 h-2"></div> Ventricoli (CSF)</div>
+                        <div class="flex items-center gap-1"><div id="leg-hd-gm" class="w-2 h-2"></div> Sostanza Grigia</div>
+                        <div class="flex items-center gap-1"><div id="leg-hd-wm" class="w-2 h-2"></div> Sostanza Bianca</div>
+                        <div class="flex items-center gap-1"><div id="leg-hd-bone" class="w-2 h-2"></div> Cranio (Osso)</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- BOTTOM DASHBOARD -->
+    <footer class="bg-slate-950 border-t border-slate-800 p-3 shrink-0 relative z-10">
+        <div class="flex flex-wrap md:flex-nowrap gap-2 max-w-full justify-between items-center text-center">
+            <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Acq. Time (TA)</div>
+                <div id="out-ta" class="font-mono text-lg text-slate-200">00:00</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">ETL / Shots</div>
+                <div id="out-etl" class="font-mono text-sm text-slate-200">-</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">SAR (W/kg)</div>
+                <div id="out-sar" class="font-mono text-sm text-slate-200 border-b border-transparent transition-colors">0.0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-[2]">
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1 flex justify-between">
+                    <span>Res (dx × dy × dz)</span>
+                    <span id="out-iso" class="font-bold text-slate-400">STATUS</span>
+                </div>
+                <div id="out-res" class="font-mono text-sm text-blue-300">0.0 × 0.0 × 0.0 mm</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">SNR Base</div>
+                <div id="out-snr-base" class="font-mono text-lg text-slate-400">0.00</div>
+            </div>
+            <div id="box-snr-final" class="border border-blue-500 bg-blue-900/20 px-4 py-2 rounded flex-1 transition-colors relative">
+                <div class="text-[10px] text-blue-300 uppercase tracking-widest mb-1">SNR Final</div>
+                <div id="out-snr-final" class="font-mono text-xl font-bold text-blue-400">0.00</div>
+                <div id="out-bw-real" class="absolute bottom-1 right-2 text-[9px] text-slate-400 opacity-70">BW: 0 Hz/Px</div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

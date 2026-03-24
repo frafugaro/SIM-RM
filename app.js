@@ -1,19 +1,20 @@
-const API_URL = "https://mri-physics-core.onrender.com/calculate";
+window.API_URL = "https://mri-physics-core.onrender.com/calculate";
 
-// STATO GLOBALE
-const state = {
-    orientation: 'Transversal',
-    tr: 2200.0, te: 105.0, slices: 60, fovRead: 220.0, fovPhasePct: 100.0,
-    sliceThick: 1.0, nex: 1.8, conc: 1, bw: 521.0, echoSpacing: 4.4, dimension: '3D',
-    baseRes: 320, phaseResPct: 91.0, sliceResPct: 81.0, interp: 1,
-    phaseOS: 30.0, sliceOS: 5.0, phasePartial: 100.0, slicePartial: 100.0,
-    turboFactor: 64, accelR: 4.0, gFactor: 1.0, accelType: 'GRAPPA', csFactor: 2.0,
-    flipAngle: 135.0, saturation: 'Standard',
-    region: 'abdomen'
+window.state = {
+    slabGroup: '1', slabs: '1', slices: 60, position: '0.0', orientation: 'Transversal', phaseEncDir: 'R >> L',
+    phaseOS: 30.0, sliceOS: 5.0, fovRead: 220.0, fovPhasePct: 100.0, sliceThick: 1.0, tr: 2200.0, te: 105.0, nex: 1.8, conc: 1,
+    autoAlign: 'Head > Brain', coilElements: 'BO2,3;SP4,5',
+    flipAngle: 135.0, saturation: 'Nessuna', darkBlood: false, bloodSuppression: 'Off',
+    dynamicMode: 'Standard', measurements: 1.0, multipleSeries: 'Each Measurement', reordering: 'Linear',
+    baseRes: 320, phaseResPct: 91.0, sliceResPct: 81.0, interp: '1',
+    accelType: 'GRAPPA', accelR: 4.0, refScans: 'GRE/Separate', accelPE: 2.0, refLinesPE: 24, accel3D: 2.0, refLines3D: 24,
+    reorderShift3D: 1.0, phasePartial: 100.0, slicePartial: 100.0, gFactor: 1.0, csFactor: 2.0,
+    fovReadPhaseText: '220 / 100 %',
+    seqName: 'SPACE 3D', dimension: '3D', bw: 521.0, echoSpacing: 4.4, turboFactor: 64, echoTrainDuration: 220.0,
+    region: 'abdomen', patWeight: 75, patHeight: 175
 };
 
-// CONFIGURAZIONE UI
-const config = {
+window.config = {
     routine:[
         { section: 'Routine Settings', fields:[
             { id: 'slices', label: 'Slices', val: state.slices, type: 'number', step: 2 },
@@ -34,7 +35,7 @@ const config = {
             { id: 'tr', label: 'TR (ms)', val: state.tr, type: 'number' },
             { id: 'te', label: 'TE (ms)', val: state.te, type: 'number' },
             { id: 'flipAngle', label: 'Flip Angle', val: state.flipAngle, type: 'number', step: 5 },
-            { id: 'saturation', label: 'Saturazione', val: state.saturation, type: 'select', options:['Standard', 'Fat Sat', 'Water Sat'] }
+            { id: 'saturation', label: 'Saturazione', val: state.saturation, type: 'select', options:['Nessuna', 'Fat Sat', 'Water Sat'] }
         ]}
     ],
     resolution:[
@@ -42,6 +43,25 @@ const config = {
             { id: 'baseRes', label: 'Base Resolution', val: state.baseRes, type: 'number', step: 16 },
             { id: 'phaseResPct', label: 'Phase Res (%)', val: state.phaseResPct, type: 'number', step: 1 },
             { id: 'sliceResPct', label: 'Slice Res (%)', val: state.sliceResPct, type: 'number', step: 1 }
+        ]}
+    ],
+    geometry:[
+        { section: 'Geometry', fields:[
+            { id: 'slices', label: 'Slices per Slab', val: state.slices, type: 'number' },
+            { id: 'fovRead', label: 'FOV Read (mm)', val: state.fovRead, type: 'number' },
+            { id: 'sliceThick', label: 'Slice Thick (mm)', val: state.sliceThick, type: 'number' },
+            { id: 'tr', label: 'TR (ms)', val: state.tr, type: 'number' }
+        ]}
+    ],
+    system:[
+        { section: 'Miscellaneous & Tx/Rx', fields:[
+            { label: 'B0 Shim', val: 'Standard', type: 'text', readOnly: true },
+            { label: 'Frequency 1H (MHz)', val: 123.2, type: 'text', readOnly: true }
+        ]}
+    ],
+    physio:[
+        { section: 'Signal', fields:[
+            { id: 'tr', label: 'TR (ms)', val: state.tr, type: 'number' }
         ]}
     ],
     sequence:[
@@ -62,109 +82,146 @@ const config = {
     ]
 };
 
-// LOGIN & SEARCH
-document.getElementById('login-btn')?.addEventListener('click', checkPassword);
-document.getElementById('login-pwd')?.addEventListener('keydown', (e) => { if(e.key==='Enter') checkPassword(); });
-function checkPassword() {
+// ==========================================
+// FUNZIONI GLOBALI (ACCESSIBILI DALL'HTML)
+// ==========================================
+
+window.checkPassword = function() {
     if (document.getElementById('login-pwd').value === 'simulatore') {
         document.getElementById('login-screen').style.opacity = '0';
         setTimeout(() => document.getElementById('login-screen').style.display = 'none', 500);
     } else {
         document.getElementById('login-err').classList.remove('hidden');
     }
-}
+};
 
-document.getElementById('quick-search').addEventListener('input', function(e) {
-    const query = e.target.value.toLowerCase();
+window.searchParameters = function(query) {
     const resContainer = document.getElementById('search-results');
     resContainer.innerHTML = '';
-    if (query.length < 2) { resContainer.classList.add('hidden'); return; }
+    if (!query || query.trim().length < 2) { resContainer.classList.add('hidden'); return; }
+    
+    const lowerQuery = query.toLowerCase();
+    let hasMatches = false;
     
     Object.keys(config).forEach(tabKey => {
         config[tabKey].forEach(section => {
             section.fields.forEach(field => {
-                if (field.label.toLowerCase().includes(query)) {
+                if (field.label.toLowerCase().includes(lowerQuery)) {
+                    hasMatches = true;
                     const div = document.createElement('div');
                     div.className = 'px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 cursor-pointer border-b border-slate-800';
                     div.innerText = `${field.label} - Tab: ${tabKey.toUpperCase()}`;
-                    div.onclick = () => {
-                        switchTab(tabKey);
-                        setTimeout(() => {
-                            const el = document.getElementById(`inp-${field.id}`);
-                            if(el) { el.focus(); el.classList.add('ring-2', 'ring-blue-400'); setTimeout(()=>el.classList.remove('ring-2'), 2000); }
-                        }, 50);
-                        resContainer.classList.add('hidden');
-                        document.getElementById('quick-search').value = '';
-                    };
+                    div.onclick = () => window.MapsToParam(tabKey, field.id);
                     resContainer.appendChild(div);
                 }
             });
         });
     });
-    resContainer.classList.remove('hidden');
-    resContainer.classList.add('flex');
-});
 
-function autoIso() {
-    const dx = state.fovRead / state.baseRes;
+    if (hasMatches) {
+        resContainer.classList.remove('hidden');
+        resContainer.classList.add('flex');
+    } else {
+        resContainer.classList.add('hidden');
+        resContainer.classList.remove('flex');
+    }
+};
+
+window.MapsToParam = function(tabKey, fieldId) {
+    document.getElementById('search-results').classList.add('hidden');
+    document.getElementById('quick-search').value = '';
+    window.switchTab(tabKey);
+
+    if (!fieldId) return; 
+
+    setTimeout(() => {
+        const el = document.getElementById(`inp-${fieldId}`);
+        if (el) {
+            el.focus();
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-2', 'ring-blue-400', 'bg-blue-900/30', 'transition-all', 'duration-500');
+            setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-900/30'), 2000);
+        }
+    }, 50);
+};
+
+window.autoIso = function() {
+    const dx = (state.fovRead || 220) / (state.baseRes || 320);
     state.sliceThick = parseFloat(dx.toFixed(2));
     state.phaseResPct = 100;
     state.sliceResPct = 100;
     state.fovPhasePct = 100;
+    
     document.querySelectorAll(`[id="inp-sliceThick"]`).forEach(el => el.value = state.sliceThick);
     document.querySelectorAll(`[id="inp-phaseResPct"]`).forEach(el => el.value = 100);
     document.querySelectorAll(`[id="inp-sliceResPct"]`).forEach(el => el.value = 100);
     document.querySelectorAll(`[id="inp-fovPhasePct"]`).forEach(el => el.value = 100);
-    calculatePhysics();
-}
+    
+    window.calculatePhysics();
+};
 
-// UI RENDERING
-function renderTabContent(tabKey) {
+window.renderTabContent = function(tabKey) {
     const container = document.getElementById('parameters-container');
     container.innerHTML = '';
     if(!config[tabKey]) return;
+
+    const is2D = state.dimension === '2D';
+    const isCS = state.accelType === 'CS';
 
     config[tabKey].forEach(sec => {
         let html = `<h3 class="text-xs font-bold text-blue-500 mb-3 uppercase border-b border-slate-700 pb-1">${sec.section}</h3><div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">`;
         sec.fields.forEach(f => {
             let val = state[f.id] !== undefined ? state[f.id] : f.val;
-            let display = (f.id === 'csFactor' && state.accelType !== 'CS') ? 'display: none;' : '';
+            let disabled = (is2D &&['sliceOS', 'sliceResPct', 'slicePartial'].includes(f.id)) || 
+                           (isCS && f.id === 'accelR') || 
+                           (is2D && f.id === 'accelType' && val === 'CAIPIRINHA') ? 'disabled' : '';
+            let opacity = disabled ? 'opacity: 0.3;' : '';
+            let display = (f.id === 'csFactor' && !isCS) ? 'display: none;' : '';
             
             let inp = '';
             if (f.type === 'select') {
-                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs transition-opacity">
-                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs transition-opacity" ${disabled}>
+                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''} ${f.id==='accelType'&&o==='CAIPIRINHA'&&is2D?'disabled':''}>${o}</option>`).join('')}</select>`;
             } else if (f.type === 'range') {
-                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500"><span id="val-${f.id}" class="text-xs font-mono text-blue-400">${val}x</span></div>`;
+                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500" ${disabled}><span id="val-${f.id}" class="text-xs font-mono text-blue-400">${val}x</span></div>`;
             } else if (f.type === 'button') {
                 inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500 outline-none">${f.label}</button>`;
             } else {
-                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs transition-opacity">`;
+                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs transition-opacity" ${disabled}>`;
             }
 
-            html += `<div class="flex flex-col gap-1 transition-opacity justify-end" style="${display}">
+            html += `<div class="flex flex-col gap-1 transition-opacity justify-end" style="${opacity} ${display}">
                 ${f.type !== 'button' ? `<label class="text-[10px] uppercase text-slate-400">${f.label}</label>` : ''}${inp}</div>`;
         });
         container.innerHTML += `<div class="mb-6">${html}</div></div>`;
     });
-    applyUIConstraints();
-}
+};
 
-function switchTab(tabKey) {
+window.switchTab = function(tabKey) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'bg-slate-800', 'border-blue-500', 'text-white'));
     const btn = document.querySelector(`[data-target="${tabKey}"]`);
     if(btn) btn.classList.add('active', 'bg-slate-800', 'border-blue-500', 'text-white');
-    renderTabContent(tabKey);
-}
+    
+    if (tabKey === 'setup') {
+        document.getElementById('patient-panel').classList.remove('hidden');
+        document.getElementById('parameters-container').classList.add('hidden');
+    } else {
+        document.getElementById('patient-panel').classList.add('hidden');
+        document.getElementById('parameters-container').classList.remove('hidden');
+        window.renderTabContent(tabKey);
+    }
+};
 
-// MANTIENE FOCUS SENZA REDRAW
-function updateState(key, value) {
-    if (['dimension', 'orientation', 'saturation', 'accelType'].includes(key)) {
+window.updateState = function(key, value) {
+    if (['dimension', 'orientation', 'saturation', 'accelType', 'region'].includes(key)) {
         state[key] = value;
-        // Solo per i select che alterano UI facciamo rerender
+        // Solo per questi select aggiorniamo il layout
         if(['dimension', 'accelType'].includes(key)) {
-            calculatePhysics();
-            renderTabContent(document.querySelector('.tab-btn.active').dataset.target); 
+            window.calculatePhysics();
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab && activeTab.dataset.target !== 'setup') {
+                window.renderTabContent(activeTab.dataset.target); 
+            }
             return;
         }
     } else {
@@ -174,33 +231,53 @@ function updateState(key, value) {
     document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => { if(el.value != value) el.value = value; });
     if(document.getElementById(`val-${key}`)) document.getElementById(`val-${key}`).innerText = value + (key==='csFactor'?'x':'');
     
-    calculatePhysics();
-    applyUIConstraints();
-}
+    window.calculatePhysics();
+    window.applyUIConstraints();
+};
 
-function changeRegion(val) {
+window.changeRegion = function(val) {
     state.region = val;
-    calculatePhysics();
-}
+    window.updatePhantomVisibility();
+    window.calculatePhysics();
+};
 
-function applyUIConstraints() {
+window.applyUIConstraints = function() {
     const is2D = state.dimension === '2D';
     const isCS = state.accelType === 'CS';
     
-    document.querySelectorAll(`[id="inp-sliceOS"], [id="inp-sliceResPct"],[id="inp-slicePartial"]`).forEach(el => {
-        el.disabled = is2D;
-        const flexParent = el.closest('.flex-col');
-        if(flexParent) flexParent.style.opacity = is2D ? '0.3' : '1';
+    const accelSelect = document.getElementById('inp-accelType');
+    if (accelSelect) {
+        for (let i=0; i<accelSelect.options.length; i++) {
+            if (accelSelect.options[i].value === 'CAIPIRINHA') {
+                accelSelect.options[i].disabled = is2D;
+                if (is2D && state.accelType === 'CAIPIRINHA') window.updateState('accelType', 'GRAPPA');
+            }
+        }
+    }
+
+    const zFields =['sliceOS', 'sliceResPct', 'slicePartial'];
+    zFields.forEach(f => {
+        document.querySelectorAll(`[id="inp-${f}"]`).forEach(el => {
+            el.disabled = is2D;
+            const flexParent = el.closest('.flex-col');
+            if(flexParent) flexParent.style.opacity = is2D ? '0.3' : '1';
+        });
     });
 
+    const csSlider = document.getElementById('inp-csFactor');
+    if(csSlider) {
+        const flexParent = csSlider.closest('.flex-col');
+        if(flexParent) flexParent.style.display = isCS ? 'flex' : 'none';
+    }
+    
     document.querySelectorAll(`[id="inp-accelR"]`).forEach(el => {
         el.disabled = isCS;
         const flexParent = el.closest('.flex-col');
         if(flexParent) flexParent.style.opacity = isCS ? '0.3' : '1';
     });
-}
+};
 
-function updatePhantomVisibility() {
+window.updatePhantomVisibility = function() {
     document.querySelectorAll('g[id^="ph-group-"]').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('div[id^="legend-"]').forEach(el => el.classList.add('hidden'));
 
@@ -235,7 +312,7 @@ function updatePhantomVisibility() {
         'abdomen-axial': 'Axial Abdomen', 
         'abdomen-coronal': 'Coronal Abdomen', 
         'abdomen-sagittal': 'Sagittal Abdomen', 
-        'pelvis-axial': 'Axial Pelvis',
+        'pelvis-axial': 'Axial Pelvis / Prostate',
         'pelvis-coronal': 'Coronal Pelvis',
         'pelvis-sagittal': 'Sagittal Pelvis',
         'thorax-axial': 'Axial Thorax', 
@@ -244,48 +321,24 @@ function updatePhantomVisibility() {
         'head-sagittal': 'Sagittal Brain'
     };
     document.getElementById('phantom-title').innerText = titles[viewId] || 'Phantom';
-}
+};
 
 // ==========================================
-// PHYSICS CORE & API FETCH (AUTO-SCALING)
+// CORE PHYSICS LOGIC & API FETCH
 // ==========================================
 
-async function fetchSignalFromJava(t1, t2, pd, overrideTR = null, overrideTE = null, isFat = false) {
-    if (state.saturation === 'Fat Sat' && isFat) return `rgb(10, 10, 10)`;
-    if (state.saturation === 'Water Sat' && !isFat) return `rgb(10, 10, 10)`;
-
-    const effTR = overrideTR !== null ? overrideTR : state.tr;
-    const effTE = overrideTE !== null ? overrideTE : state.te;
-
-    let rawSignal = 0;
-    try {
-        const url = `${API_URL}?pd=${pd}&t1=${t1}&t2=${t2}&tr=${effTR}&te=${effTE}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("API call failed");
-        const data = await response.json();
-        rawSignal = data.Signal;
-    } catch (err) {
-        // Fallback equazione di Bloch locale
-        rawSignal = pd * (1 - Math.exp(-effTR / t1)) * Math.exp(-effTE / t2);
-    }
-
-    return mapSignalToLevel(rawSignal, effTR, effTE);
-}
-
-// DYNAMIC W/L MAPPING (5 discrete levels logic via interpolation)
-function mapSignalToLevel(rawSignal, tr, te) {
+window.mapSignalToLevel = function(rawSignal, tr, te) {
     let referenceSignal;
     if (te < 50) {
-        // T1-weighted reference (Fat)
+        // Riferimento T1 (Grasso a 3T)
         referenceSignal = 1.0 * (1 - Math.exp(-tr / 250)) * Math.exp(-te / 80);
     } else {
-        // T2-weighted reference (Fluid)
+        // Riferimento T2 (Fluido libero a 3T)
         referenceSignal = 1.0 * (1 - Math.exp(-tr / 4000)) * Math.exp(-te / 2000);
     }
 
     if (referenceSignal < 0.001) referenceSignal = 0.001;
 
-    // Normalizza con un po' di margine (90%)
     let normalized = rawSignal / (referenceSignal * 0.9);
     let s = Math.max(0, Math.min(1.0, normalized));
 
@@ -300,71 +353,100 @@ function mapSignalToLevel(rawSignal, tr, te) {
     let c = Math.round(levels[lowerIdx] * (1 - t) + levels[upperIdx] * t);
     
     return `rgb(${c}, ${c}, ${c})`;
-}
+};
 
-async function calculatePhysics() {
-    updatePhantomVisibility();
+window.fetchSignalFromJava = async function(t1, t2, pd, overrideTR = null, overrideTE = null, isFat = false) {
+    if (state.saturation === 'Fat Sat' && isFat) return `rgb(10, 10, 10)`;
+    if (state.saturation === 'Water Sat' && !isFat) return `rgb(10, 10, 10)`;
+
+    const effTR = overrideTR !== null ? overrideTR : (state.tr || 1);
+    const effTE = overrideTE !== null ? overrideTE : (state.te || 1);
+
+    let rawSignal = 0;
+    try {
+        const url = `${API_URL}?pd=${pd}&t1=${t1}&t2=${t2}&tr=${effTR}&te=${effTE}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("API fallita");
+        const data = await response.json();
+        rawSignal = data.Signal;
+    } catch (err) {
+        // Fallback di sicurezza: Bloch Standard Equation
+        rawSignal = pd * (1 - Math.exp(-effTR / t1)) * Math.exp(-effTE / t2);
+    }
+
+    return window.mapSignalToLevel(rawSignal, effTR, effTE);
+};
+
+window.calculatePhysics = async function() {
+    window.updatePhantomVisibility();
 
     const is3D = state.dimension === '3D';
     const isCS = state.accelType === 'CS';
-    const effR = isCS ? 1.0 : state.accelR;
+    const effR = isCS ? 1.0 : (state.accelR || 1);
+    const TR = state.tr || 1;
+    const TE = state.te || 1;
+    const tf = state.turboFactor || 1;
 
-    const N_x = state.baseRes;
-    const N_y = Math.round(state.baseRes * (state.fovPhasePct / 100) * (state.phaseResPct / 100));
-    let N_z = is3D ? Math.round(state.slices * (state.sliceResPct / 100)) : 1;
+    const N_x = state.baseRes || 1;
+    const N_y = Math.round(N_x * ((state.fovPhasePct || 100) / 100) * ((state.phaseResPct || 100) / 100)) || 1;
+    let N_z = is3D ? Math.round((state.slices || 1) * ((state.sliceResPct || 100) / 100)) || 1 : 1;
 
-    const dx = state.fovRead / N_x;
-    let dy = (state.fovRead * (state.fovPhasePct / 100)) / N_y;
+    const dx = (state.fovRead || 220) / N_x;
+    let dy = ((state.fovRead || 220) * ((state.fovPhasePct || 100) / 100)) / N_y;
     if (state.fovPhasePct === 100 && state.phaseResPct === 100) dy = dx; 
-    let dz = is3D ? (state.slices * state.sliceThick) / N_z : state.sliceThick;
+    let dz = is3D ? ((state.slices || 1) * (state.sliceThick || 1)) / N_z : (state.sliceThick || 1);
 
     const V_voxel = dx * dy * dz;
     const isIsotropic = (Math.max(dx, dy, dz) - Math.min(dx, dy, dz)) <= 0.01;
 
-    const effNy = N_y * (1 + state.phaseOS / 100) * (state.phasePartial / 100);
+    const effNy = N_y * (1 + (state.phaseOS || 0) / 100) * ((state.phasePartial || 100) / 100);
     
     let taSeconds = 0;
     let displayedShots = 0;
+    let totalLines = 0;
 
     if (is3D) {
-        const effNz = N_z * (1 + state.sliceOS / 100) * (state.slicePartial / 100);
-        const totalLines = effNy * effNz;
-        taSeconds = (totalLines * state.nex * state.tr) / (state.turboFactor * effR * 1000);
-        displayedShots = totalLines / (state.turboFactor * effR);
+        const effNz = N_z * (1 + (state.sliceOS || 0) / 100) * ((state.slicePartial || 100) / 100);
+        totalLines = effNy * effNz;
+        taSeconds = (totalLines * (state.nex || 1) * TR) / (tf * effR * 1000);
+        displayedShots = totalLines / (tf * effR);
     } else {
-        const totalLines = effNy * state.slices;
-        const fettePerTR = Math.max(1, Math.floor(state.tr / (state.echoSpacing * state.turboFactor + 10)));
-        taSeconds = (totalLines * state.nex) / (state.turboFactor * effR * fettePerTR) * (state.tr / 1000);
-        displayedShots = totalLines / (state.turboFactor * effR);
+        totalLines = effNy * (state.slices || 1);
+        const fettePerTR = Math.max(1, Math.floor(TR / ((state.echoSpacing || 4.4) * tf + 10)));
+        taSeconds = (totalLines * (state.nex || 1)) / (tf * effR * fettePerTR) * (TR / 1000);
+        displayedShots = totalLines / (tf * effR);
     }
     
     if(isCS) {
-        taSeconds = taSeconds / state.csFactor;
-        displayedShots = displayedShots / state.csFactor;
+        taSeconds = taSeconds / (state.csFactor || 1);
+        displayedShots = displayedShots / (state.csFactor || 1);
     }
 
-    const weight = parseFloat(document.getElementById('pat-weight').value) || 75;
-    const height = parseFloat(document.getElementById('pat-height').value) || 175;
-    const bmi = weight / Math.pow(height/100, 2);
-    const sar = (0.002 * state.turboFactor * bmi / (state.tr / 1000)) * Math.pow(state.flipAngle / 180, 2);
+    const m = Math.floor(taSeconds / 60);
+    const s = Math.round(taSeconds % 60);
 
-    const bwHzPx = state.bw / N_y; 
-    const acqTerm = is3D ? (state.nex * N_y * N_z) / 14500 : (state.nex * N_y) / 14500;
+    const weight = state.patWeight || 75;
+    const height = state.patHeight || 175;
+    const bmi = weight / Math.pow(height/100, 2);
+    const sar = (0.002 * tf * bmi / (TR / 1000)) * Math.pow((state.flipAngle || 135) / 180, 2);
+
+    const bwHzPx = (state.bw || 521) / N_y; 
+    const acqTerm = is3D ? ((state.nex || 1) * N_y * N_z) / 14500 : ((state.nex || 1) * N_y) / 14500;
     
-    let snrBase = (V_voxel / 0.64) * Math.sqrt(acqTerm) * Math.sqrt(521 / state.bw) * Math.exp(-state.te / 85) * 3.5; 
+    let snrBase = (V_voxel / 0.64) * Math.sqrt(acqTerm) * Math.sqrt(521 / (state.bw || 521)) * Math.exp(-TE / 85) * 3.5; 
     
     let snrFinal = snrBase;
     if (bwHzPx < 100) snrFinal *= 1.15; else if (bwHzPx > 250) snrFinal *= 0.60;
 
     if (isCS) {
-        snrFinal *= Math.sqrt(1.0 / state.csFactor) * (Math.sqrt(state.csFactor) * 0.9);
+        snrFinal *= Math.sqrt(1.0 / (state.csFactor || 1)) * (Math.sqrt(state.csFactor || 1) * 0.9);
     } else {
-        let g_eff = state.accelType === 'CAIPIRINHA' ? Math.max(1.0, state.gFactor - 0.3) : state.gFactor;
+        let g_eff = state.accelType === 'CAIPIRINHA' ? Math.max(1.0, (state.gFactor || 1) - 0.3) : (state.gFactor || 1);
         snrFinal *= (1 / (g_eff * Math.sqrt(effR)));
     }
 
-    document.getElementById('out-ta').innerText = `${Math.floor(taSeconds / 60)}:${Math.round(taSeconds % 60).toString().padStart(2, '0')}`;
-    document.getElementById('out-etl').innerText = `${state.turboFactor} / ${Math.ceil(displayedShots)}`;
+    document.getElementById('out-ta').innerText = `${m}:${s.toString().padStart(2, '0')}`;
+    document.getElementById('out-etl').innerText = `${tf} / ${Math.ceil(displayedShots)}`;
     document.getElementById('out-res').innerText = `${dx.toFixed(2)} × ${dy.toFixed(2)} × ${dz.toFixed(2)} mm`;
     document.getElementById('out-bw-real').innerText = `BW: ${bwHzPx.toFixed(1)} Hz/Px`;
     document.getElementById('out-snr-base').innerText = snrBase.toFixed(2);
@@ -378,21 +460,20 @@ async function calculatePhysics() {
     isoEl.innerText = isIsotropic ? 'ISO ✅' : 'ANISO';
     isoEl.className = `font-bold text-[10px] ${isIsotropic ? 'text-green-500' : 'text-yellow-600'}`;
 
-    await renderSVGPhantom(snrFinal, bwHzPx);
-}
+    await window.renderSVGPhantom(snrFinal, bwHzPx);
+};
 
-// RENDERING ASINCRONO SVG PHANTOM (MULTIPLE FETCHES CON T1/T2 REALI)
-async function renderSVGPhantom(snrFinal, bwHzPx) {
+window.renderSVGPhantom = async function(snrFinal, bwHzPx) {
     if (state.region === 'abdomen') {
         const[c_liver, c_spleen, c_kidney_c, c_kidney_m, c_muscle, c_fat, c_spine, c_fluid] = await Promise.all([
-            fetchSignalFromJava(800, 42, 0.85, null, null, false),
-            fetchSignalFromJava(1000, 80, 0.90, null, null, false),
-            fetchSignalFromJava(1100, 95, 0.90, null, null, false),
-            fetchSignalFromJava(1100, 130, 0.95, null, null, false),
-            fetchSignalFromJava(900, 50, 0.80, null, null, false),
-            fetchSignalFromJava(250, 80, 1.0, null, null, true),
-            fetchSignalFromJava(300, 60, 0.80, null, null, false),
-            fetchSignalFromJava(4000, 2000, 1.0, null, null, false)
+            window.fetchSignalFromJava(810, 42, 0.85, null, null, false),
+            window.fetchSignalFromJava(1000, 80, 0.90, null, null, false),
+            window.fetchSignalFromJava(1100, 95, 0.90, null, null, false),
+            window.fetchSignalFromJava(1100, 130, 0.95, null, null, false),
+            window.fetchSignalFromJava(900, 50, 0.80, null, null, false),
+            window.fetchSignalFromJava(250, 80, 1.0, null, null, true),
+            window.fetchSignalFromJava(300, 60, 0.80, null, null, false),
+            window.fetchSignalFromJava(4000, 2000, 1.0, null, null, false)
         ]);
 
         document.querySelectorAll('[id$="-liver"]').forEach(el => el.setAttribute('fill', c_liver));
@@ -417,14 +498,23 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
         if(document.getElementById('leg-abd-muscle')) document.getElementById('leg-abd-muscle').style.backgroundColor = c_muscle;
     } 
     else if (state.region === 'pelvis') {
+        let t1pz = 1200, t2pz = 130, pdPz = 0.9;
+        let t1tz = 1000, t2tz = 80, pdTz = 0.8;
+        
+        if (state.te >= 100) {
+            const edemaFactor = Math.min(2.0, 1.0 + ((state.te - 100) / 100)); 
+            t2pz = 180; pdPz = 0.9 * edemaFactor;
+            t2tz = 100; pdTz = 0.8 * edemaFactor;
+        }
+
         const[c_pz, c_tz, c_bladder, c_muscle, c_fat, c_bone, c_rectum] = await Promise.all([
-            fetchSignalFromJava(1200, 130, 0.90, null, null, false),
-            fetchSignalFromJava(1000, 80, 0.80, null, null, false),
-            fetchSignalFromJava(4000, 2000, 1.0, null, null, false),
-            fetchSignalFromJava(900, 50, 0.8, null, null, false),
-            fetchSignalFromJava(250, 80, 1.0, null, null, true),
-            fetchSignalFromJava(2000, 10, 0.1, null, null, false),
-            fetchSignalFromJava(800, 50, 0.5, null, null, false)
+            window.fetchSignalFromJava(t1pz, t2pz, pdPz, null, null, false),
+            window.fetchSignalFromJava(t1tz, t2tz, pdTz, null, null, false),
+            window.fetchSignalFromJava(3000, 1000, 1.0, null, null, false),
+            window.fetchSignalFromJava(900, 50, 0.8, null, null, false),
+            window.fetchSignalFromJava(250, 80, 1.0, null, null, true),
+            window.fetchSignalFromJava(2000, 10, 0.1, null, null, false),
+            window.fetchSignalFromJava(800, 50, 0.5, null, null, false)
         ]);
 
         document.querySelectorAll('[id$="-prostate-pz"]').forEach(el => el.setAttribute('fill', c_pz));
@@ -445,16 +535,17 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
     }
     else if (state.region === 'thorax') {
         const[c_lung, c_heart, c_blood, c_muscle, c_fat, c_spine] = await Promise.all([
-            fetchSignalFromJava(1200, 30, 0.2, null, null, false),
-            fetchSignalFromJava(900, 50, 0.8, null, null, false),
-            fetchSignalFromJava(1200, 50, 0.9, null, null, false), // Dark blood SE
-            fetchSignalFromJava(900, 50, 0.8, null, null, false),
-            fetchSignalFromJava(250, 80, 1.0, null, null, true),
-            fetchSignalFromJava(4000, 2000, 1.0, null, null, false) // Fluid/CSF in spine
+            window.fetchSignalFromJava(1200, 30, 0.2, null, null, false),
+            window.fetchSignalFromJava(900, 50, 0.8, null, null, false),
+            window.fetchSignalFromJava(1200, 50, 0.9, null, null, false), 
+            window.fetchSignalFromJava(900, 50, 0.8, null, null, false),
+            window.fetchSignalFromJava(250, 80, 1.0, null, null, true),
+            window.fetchSignalFromJava(300, 60, 0.8, null, null, false)
         ]);
         
         document.querySelectorAll('[id*="-lung"]').forEach(el => el.setAttribute('fill', c_lung));
-        document.querySelectorAll('[id$="-heart-lv"], [id$="-heart-rv"], [id$="-heart-la"], [id$="-heart-ra"], [id$="-heart"]').forEach(el => el.setAttribute('fill', c_heart));
+        document.querySelectorAll('[id$="-heart"]').forEach(el => el.setAttribute('fill', c_heart));
+        document.querySelectorAll('[id$="-heart-lv"], [id$="-heart-rv"],[id$="-heart-la"], [id$="-heart-ra"]').forEach(el => el.setAttribute('fill', c_heart));
         document.querySelectorAll('[id$="-aorta"]').forEach(el => el.setAttribute('fill', c_blood));
         document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
         document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
@@ -463,20 +554,23 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
 
         if(document.getElementById('leg-tho-lung')) document.getElementById('leg-tho-lung').style.backgroundColor = c_lung;
         if(document.getElementById('leg-tho-heart')) document.getElementById('leg-tho-heart').style.backgroundColor = c_heart;
-        if(document.getElementById('leg-tho-muscle')) document.getElementById('leg-tho-muscle').style.backgroundColor = c_muscle;
+        if(document.getElementById('leg-tho-blood')) document.getElementById('leg-tho-blood').style.backgroundColor = c_blood;
         if(document.getElementById('leg-tho-fat')) document.getElementById('leg-tho-fat').style.backgroundColor = c_fat;
     }
     else if (state.region === 'head') {
+        const isT1 = state.orientation === 'Sagittal';
+        const effTR = isT1 ? 500 : state.tr;
+        const effTE = isT1 ? 15 : state.te;
+
         const[c_csf, c_gm, c_wm, c_fat, c_bone] = await Promise.all([
-            fetchSignalFromJava(4000, 2000, 1.0, null, null, false),
-            fetchSignalFromJava(1200, 100, 0.85, null, null, false),
-            fetchSignalFromJava(600, 80, 0.75, null, null, false),
-            fetchSignalFromJava(250, 80, 1.0, null, null, true),
-            fetchSignalFromJava(2000, 10, 0.1, null, null, false)
+            window.fetchSignalFromJava(4000, 2000, 1.0, effTR, effTE, false),
+            window.fetchSignalFromJava(1200, 100, 0.85, effTR, effTE, false),
+            window.fetchSignalFromJava(600, 80, 0.75, effTR, effTE, false),
+            window.fetchSignalFromJava(250, 80, 1.0, effTR, effTE, true),
+            window.fetchSignalFromJava(2000, 10, 0.1, effTR, effTE, false)
         ]);
 
         document.querySelectorAll('[id*="-csf"]').forEach(el => el.setAttribute('fill', c_csf));
-        document.querySelectorAll('[id*="-ventricles"]').forEach(el => el.setAttribute('fill', c_csf));
         document.querySelectorAll('[id*="-ventricle"]').forEach(el => el.setAttribute('fill', c_csf));
         document.querySelectorAll('[id*="-gm"]').forEach(el => el.setAttribute('fill', c_gm));
         document.querySelectorAll('[id*="-wm"]').forEach(el => el.setAttribute('fill', c_wm));
@@ -490,22 +584,29 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
         if(document.getElementById('leg-hd-bone')) document.getElementById('leg-hd-bone').style.backgroundColor = c_bone;
     }
 
-    // Gestione Visuale
-    const baseNoise = Math.max(0, (1.0 - snrFinal) * 0.3);
-    const gFactorOpacity = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
+    let baseNoise = Math.max(0, (1.0 - snrFinal) * 0.3);
+    let gFactorOpacity = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
     
+    if (state.accelType === 'CS') {
+        const cleanFactor = state.csFactor * 0.05;
+        baseNoise = Math.max(0, baseNoise - cleanFactor);
+        gFactorOpacity = Math.max(0, gFactorOpacity - cleanFactor);
+        document.getElementById('phantom-container').style.filter = `grayscale(100%) blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
+    } else {
+        document.getElementById('phantom-container').style.filter = 'grayscale(100%)';
+    }
+
     document.getElementById('ph-noise').setAttribute('opacity', baseNoise);
     document.getElementById('ph-noise-gfactor').setAttribute('opacity', gFactorOpacity);
-
-    let filterStr = 'grayscale(100%) ';
-    if (state.accelType === 'CS') filterStr += `blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
-    document.getElementById('phantom-container').style.filter = filterStr;
 
     const shiftPx = bwHzPx < 100 ? 3 : (bwHzPx <= 250 ? 1 : 0);
     document.querySelectorAll('.transform-water').forEach(el => {
         el.style.transform = `translateX(${shiftPx}px)`;
         el.style.filter = shiftPx > 0 ? `drop-shadow(-${shiftPx}px 0px 0px rgba(0,0,0,1))` : '';
     });
-}
+};
 
-document.addEventListener('DOMContentLoaded', () => { switchTab('routine'); calculatePhysics(); });
+document.addEventListener('DOMContentLoaded', () => { 
+    window.switchTab('routine'); 
+    window.calculatePhysics(); 
+});

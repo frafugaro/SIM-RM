@@ -105,6 +105,7 @@
                                     <path id="ph-abd-ax-kidney-l-medulla" d="M 150 132 C 153 122, 147 118, 142 118 C 136 118, 133 125, 139 135 C 144 142, 147 142, 150 132 Z" class="transition-colors duration-300"/>
                                 </g>
                                 <path id="ph-abd-ax-spine" d="M 90 145 C 90 135, 110 135, 110 145 C 110 158, 105 163, 100 163 C 95 163, 90 158, 90 145 Z" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <circle id="ph-abd-ax-csf" cx="100" cy="148" r="3" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-abd-ax-fluid" d="M 75 90 C 85 80, 115 80, 125 90 C 130 100, 120 115, 100 115 C 80 115, 70 100, 75 90 Z" class="transition-colors duration-300 transform-water texture-bowel"/>
                             </g>
 
@@ -112,20 +113,20 @@
                                 <path id="ph-abd-cor-fat" d="M 25 15 C 25 10, 175 10, 175 15 L 175 185 C 175 190, 25 190, 25 185 Z" class="transition-colors duration-300"/>
                                 <path id="ph-abd-cor-muscle" d="M 32 25 C 32 18, 168 18, 168 25 L 168 175 C 168 182, 32 182, 32 175 Z" class="transition-colors duration-300 transform-water"/>
                                 <rect id="ph-abd-cor-spine" x="92" y="18" width="16" height="164" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <rect id="ph-abd-cor-csf" x="98" y="18" width="4" height="164" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-abd-cor-liver" d="M 35 45 C 35 25, 85 20, 90 45 C 90 95, 75 125, 35 125 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                                 <path id="ph-abd-cor-spleen" d="M 165 55 C 165 35, 140 40, 135 60 C 130 80, 150 90, 165 80 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                                 <g class="transform-water">
                                     <path id="ph-abd-cor-kidney-r-cortex" d="M 45 105 C 45 90, 65 90, 70 110 C 75 135, 55 140, 45 120 Z" class="transition-colors duration-300"/>
-                                    <path id="ph-abd-cor-kidney-r-medulla" d="M 50 105 C 50 95, 60 95, 63 105 C 65 120, 55 125, 50 115 Z" class="transition-colors duration-300"/>
                                     <path id="ph-abd-cor-kidney-l-cortex" d="M 155 105 C 155 90, 135 90, 130 110 C 125 135, 145 140, 155 120 Z" class="transition-colors duration-300"/>
-                                    <path id="ph-abd-cor-kidney-l-medulla" d="M 150 105 C 150 95, 140 95, 137 105 C 135 120, 145 125, 150 115 Z" class="transition-colors duration-300"/>
                                 </g>
                             </g>
 
                             <g id="ph-group-abdomen-sagittal" class="hidden">
                                 <path id="ph-abd-sag-fat" d="M 30 15 C 10 60, 10 140, 30 185 L 170 185 C 180 140, 180 60, 170 15 Z" class="transition-colors duration-300"/>
-                                <path id="ph-abd-sag-muscle" d="M 38 23 C 15 60, 15 140, 38 177 L 162 177 C 175 140, 175 60, 162 23 Z" class="transition-colors duration-300 transform-water"/>
-                                <rect id="ph-abd-sag-spine" x="140" y="15" width="20" height="170" rx="3" ry="3" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <path id="ph-abd-sag-muscle" d="M 38 23 C 15 60, 15 140, 38 177 L 162 177 C 175 140, 175 60, 167 23 Z" class="transition-colors duration-300 transform-water"/>
+                                <rect id="ph-abd-sag-spine" x="145" y="15" width="20" height="170" rx="3" ry="3" class="transition-colors duration-300 transform-water texture-spongy"/>
+                                <rect id="ph-abd-sag-csf" x="140" y="15" width="5" height="170" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-abd-sag-liver" d="M 38 30 C 80 20, 125 30, 125 60 C 125 100, 80 115, 38 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                                 <g class="transform-water">
                                     <path id="ph-abd-sag-kidney-cortex" d="M 100 85 C 100 75, 130 75, 130 105 C 130 135, 100 145, 100 115 Z" class="transition-colors duration-300"/>
@@ -137,14 +138,15 @@
                             <g id="ph-group-pelvis-axial" class="hidden">
                                 <path id="ph-pelvis-ax-fat" d="M 20 90 C 20 40, 180 40, 180 90 C 180 160, 150 180, 100 180 C 50 180, 20 160, 20 90 Z" class="transition-colors duration-300"/>
                                 <path id="ph-pelvis-ax-muscle" d="M 28 90 C 28 50, 172 50, 172 90 C 172 150, 140 170, 100 170 C 60 170, 28 150, 28 90 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-                                <path id="ph-pelvis-ax-bone" d="M 28 90 C 28 65, 50 55, 55 65 C 45 85, 40 120, 60 140 C 45 150, 28 130, 28 90 M 172 90 C 172 65, 150 55, 145 65 C 155 85, 160 120, 140 140 C 155 150, 172 130, 172 90 Z" class="transition-colors duration-300" />
+                                <path id="ph-pelvis-ax-bone-l" d="M 28 90 C 28 65, 50 55, 55 65 C 45 85, 40 120, 60 140 C 45 150, 28 130, 28 90" class="transition-colors duration-300" />
+                                <path id="ph-pelvis-ax-bone-r" d="M 172 90 C 172 65, 150 55, 145 65 C 155 85, 160 120, 140 140 C 155 150, 172 130, 172 90" class="transition-colors duration-300" />
                                 <circle id="ph-pelvis-ax-femur-l" cx="42" cy="110" r="14" class="transition-colors duration-300 transform-water texture-spongy"/>
                                 <circle id="ph-pelvis-ax-femur-r" cx="158" cy="110" r="14" class="transition-colors duration-300 transform-water texture-spongy"/>
-                                <path id="ph-pelvis-ax-bladder" d="M 65 60 C 65 35, 135 35, 135 60 C 140 85, 120 100, 100 100 C 85 100, 60 85, 65 60 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-ax-bladder" d="M 65 60 C 65 35, 135 35, 135 60 C 140 85, 120 100, 100 100 C 80 100, 60 85, 65 60 Z" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-pelvis-ax-prostate-pz" d="M 78 115 C 78 100, 122 100, 122 115 C 126 135, 112 140, 100 140 C 88 140, 74 135, 78 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                                 <path id="ph-pelvis-ax-prostate-tz" d="M 88 115 C 88 105, 112 105, 112 115 C 114 125, 106 130, 100 130 C 94 130, 86 125, 88 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                                 <circle cx="100" cy="115" r="2" fill="#000" class="transform-water"/> 
-                                <path id="ph-pelvis-ax-rectum" d="M 88 150 C 88 138, 112 138, 112 150 C 112 165, 88 165, 88 150 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-pelvis-ax-rectum" d="M 85 150 C 85 135, 115 135, 115 150 C 115 170, 85 170, 85 150 Z" class="transition-colors duration-300 transform-water"/>
                             </g>
 
                             <g id="ph-group-pelvis-coronal" class="hidden">
@@ -193,17 +195,22 @@
                             <g id="ph-group-head-axial" class="hidden">
                                 <path id="ph-head-ax-fat" d="M 25 100 C 25 40, 175 40, 175 100 C 175 160, 150 185, 100 185 C 50 185, 25 160, 25 100 Z" class="transition-colors duration-300"/>
                                 <path id="ph-head-ax-bone" d="M 32 100 C 32 45, 168 45, 168 100 C 168 155, 145 178, 100 178 C 55 178, 32 155, 32 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-head-ax-csf-outer" d="M 37 100 C 37 50, 163 50, 163 100 C 163 150, 140 173, 100 173 C 60 173, 37 150, 37 100 Z" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-head-ax-gm" d="M 40 100 C 40 55, 75 40, 100 40 C 125 40, 160 55, 160 100 C 160 145, 135 168, 100 168 C 65 168, 40 145, 40 100 Z" class="transition-colors duration-300 transform-water texture-brain"/>
                                 <path id="ph-head-ax-wm" d="M 50 100 C 50 65, 80 50, 100 50 C 120 50, 150 65, 150 100 C 150 135, 125 155, 100 155 C 75 155, 50 135, 50 100 Z" class="transition-colors duration-300 transform-water"/>
-                                <path id="ph-head-ax-csf" d="M 85 80 Q 100 60 115 80 Q 120 110 105 125 L 100 115 L 95 125 Q 80 110 85 80 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-head-ax-ventricles" d="M 85 80 Q 100 60 115 80 Q 120 110 105 125 L 100 115 L 95 125 Q 80 110 85 80 Z" class="transition-colors duration-300 transform-water"/>
                             </g>
 
                             <g id="ph-group-head-sagittal" class="hidden">
                                 <path id="ph-hd-sag-fat" d="M 15 100 C 15 20, 180 20, 180 100 C 180 180, 120 195, 80 195 C 15 195, 15 150, 15 100 Z" class="transition-colors duration-300"/>
                                 <path id="ph-hd-sag-bone" d="M 22 100 C 22 27, 173 27, 173 100 C 173 173, 117 188, 80 188 C 22 188, 22 150, 22 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-hd-sag-csf" d="M 27 100 C 27 32, 168 32, 168 100 C 168 168, 115 181, 80 181 C 27 181, 27 145, 27 100 Z" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-hd-sag-gm" d="M 32 100 C 32 38, 160 38, 160 100 C 160 145, 115 155, 80 155 C 45 155, 32 135, 32 100 Z" class="transition-colors duration-300 transform-water texture-brain"/>
                                 <path id="ph-hd-sag-wm" d="M 42 100 C 42 50, 145 50, 145 100 C 145 135, 112 145, 80 145 C 55 145, 42 125, 42 100 Z" class="transition-colors duration-300 transform-water"/>
-                                <path id="ph-hd-sag-csf" d="M 80 90 Q 100 85 110 95 Q 105 105 90 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-hd-sag-cc" d="M 70 85 Q 100 65 125 85 Q 130 95 120 90 Q 100 75 75 90 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-hd-sag-ventricle" d="M 80 90 Q 100 85 110 95 Q 105 105 90 100 Z" class="transition-colors duration-300 transform-water"/>
+                                <path id="ph-hd-sag-brainstem" d="M 95 120 C 95 105, 115 105, 115 120 C 115 145, 105 160, 95 160 C 85 160, 95 145, 95 120 Z" class="transition-colors duration-300 transform-water"/>
+                                <ellipse id="ph-hd-sag-cerebellum" cx="130" cy="135" rx="18" ry="14" transform="rotate(-15 130 135)" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                             </g>
                             
                             <!-- LAYER RUMORE E G-FACTOR -->
@@ -212,7 +219,7 @@
                         </svg>
                     </div>
 
-                    <!-- LEGENDE DINAMICHE -->
+                    <!-- LEGENDE -->
                     <div id="legend-abdomen" class="mt-4 grid grid-cols-2 gap-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
                         <div class="flex items-center gap-1"><div id="leg-abd-liver" class="w-2 h-2 border border-slate-600"></div> Fegato</div>
                         <div class="flex items-center gap-1"><div id="leg-abd-spleen" class="w-2 h-2 border border-slate-600"></div> Milza</div>

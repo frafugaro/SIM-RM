@@ -1,95 +1,145 @@
-// --- STATE ---
+// ============================================================================
+// STRICT PHYSICS & UI RESTORATION - MRI ENGINE
+// ============================================================================
+
+// --- 1. STATE OBJECT (ALL SYNGO PARAMETERS) ---
 const state = {
     // Routine
-    slabGroup: '1.0', slabs: 1, slices: 30, position: '0.0', orientation: 'Transversal', phaseEncDir: 'R >> L',
+    slabGroup: '1', slabs: 1, slices: 60, position: 'HFS', orientation: 'Transversal', phaseEncDir: 'R >> L',
     phaseOS: 0.0, sliceOS: 0.0, fovRead: 220.0, fovPhasePct: 100.0, sliceThick: 3.0, tr: 4000.0, te: 100.0, nex: 1.0, conc: 1,
-    autoAlign: 'Head > Brain', coilElements: 'Body, Spine',
+    autoAlign: 'Head > Brain', coilElements: 'HC1-7;NC1,2',
+    
     // Contrast
-    flipAngle: 90.0, saturation: 'Standard', darkBlood: false, bloodSuppression: 'Off',
-    dynamicMode: 'Standard', measurements: 1.0, multipleSeries: 'Off', reordering: 'Linear',
+    flipAngle: 120.0, saturation: 'Standard', darkBlood: false, bloodSuppression: 'Off',
+    dynamicMode: 'Standard', measurements: 1, multipleSeries: 'Off', reordering: 'Linear',
+    
     // Resolution
     baseRes: 320, phaseResPct: 100.0, sliceResPct: 100.0, interp: '0',
-    // Acceleration
-    accelType: 'GRAPPA', accelR: 2.0, refScans: 'GRE', accelPE: 2.0, refLinesPE: 24, accel3D: 1.0, refLines3D: 24,
-    reorderShift3D: 1.0, phasePartial: 100.0, slicePartial: 100.0, gFactor: 1.2, csFactor: 2.0,
+    accelType: 'GRAPPA', accelR: 2.0, refScans: 'Integrated', accelPE: 2.0, refLinesPE: 24, 
+    accel3D: 1.0, refLines3D: 24, reorderShift3D: 0, phasePartial: 100.0, slicePartial: 100.0, csFactor: 2.0,
+    
+    // Physio
+    fovReadPhaseText: '220 / 100',
+    
     // Sequence
     seqName: 'TSE', dimension: '2D', bw: 250.0, echoSpacing: 8.0, turboFactor: 15, echoTrainDuration: 120.0,
+    
     // Setup
     region: 'abdomen', patWeight: 75, patHeight: 175
 };
 
-// --- CONFIG TABS ---
+// --- 2. CONFIGURATION OBJECT (STRICT UI RESTORATION) ---
 const config = {
     routine: [
         { section: 'Routine', fields:[
-            { id: 'slabs', label: 'Slabs (3D only)', val: state.slabs, type: 'number', step: 1 },
+            { id: 'slabGroup', label: 'Slab Group', val: state.slabGroup, type: 'text' },
+            { id: 'slabs', label: 'Slabs', val: state.slabs, type: 'number', step: 1 },
             { id: 'slices', label: 'Slices per Slab', val: state.slices, type: 'number', step: 1 },
-            { id: 'orientation', label: 'Orientation', val: state.orientation, type: 'select', options: ['Transversal', 'Coronal', 'Sagittal'] },
+            { id: 'position', label: 'Position', val: state.position, type: 'text' },
+            { id: 'orientation', label: 'Orientation', val: state.orientation, type: 'select', options:['Transversal', 'Coronal', 'Sagittal'] },
+            { id: 'phaseEncDir', label: 'Phase Encoding Dir.', val: state.phaseEncDir, type: 'select', options:['R >> L', 'A >> P', 'H >> F'] },
+            { id: 'phaseOS', label: 'Phase Oversampling %', val: state.phaseOS, type: 'number', step: 10 },
+            { id: 'sliceOS', label: 'Slice Oversampling %', val: state.sliceOS, type: 'number', step: 10 },
             { id: 'fovRead', label: 'FOV Read mm', val: state.fovRead, type: 'number', step: 10 },
             { id: 'fovPhasePct', label: 'FOV Phase %', val: state.fovPhasePct, type: 'number', step: 5 },
             { id: 'sliceThick', label: 'Slice Thickness mm', val: state.sliceThick, type: 'number', step: 0.5 },
             { id: 'tr', label: 'TR ms', val: state.tr, type: 'number', step: 100 },
-            { id: 'te', label: 'TE ms', val: state.te, type: 'number', step: 5 },
-            { id: 'nex', label: 'Averages/NEX', val: state.nex, type: 'number', step: 1 },
-            { id: 'conc', label: 'Concatenations', val: state.conc, type: 'number', step: 1 }
+            { id: 'te', label: 'TEeff ms', val: state.te, type: 'number', step: 5 },
+            { id: 'nex', label: 'Averages (NEX)', val: state.nex, type: 'number', step: 1 },
+            { id: 'conc', label: 'Concatenations', val: state.conc, type: 'number', step: 1 },
+            { id: 'autoAlign', label: 'AutoAlign', val: state.autoAlign, type: 'text' },
+            { id: 'coilElements', label: 'Coil Elements', val: state.coilElements, type: 'text' }
         ]}
     ],
     contrast:[
-        { section: 'Contrast', fields:[
-            { id: 'tr', label: 'TR ms', val: state.tr, type: 'number' },
-            { id: 'te', label: 'TE ms', val: state.te, type: 'number' },
-            { id: 'flipAngle', label: 'Flip Angle deg', val: state.flipAngle, type: 'number' },
-            { id: 'saturation', label: 'Fat Saturation', val: state.saturation, type: 'select', options:['Standard', 'Fat Sat'] }
+        { section: 'Common', fields:[
+            { id: 'tr', label: 'TR ms', val: state.tr, type: 'number', step: 100 },
+            { id: 'te', label: 'TE ms', val: state.te, type: 'number', step: 5 },
+            { id: 'flipAngle', label: 'Flip Angle deg', val: state.flipAngle, type: 'number', step: 5 },
+            { id: 'saturation', label: 'Fat-Water Contrast', val: state.saturation, type: 'select', options: ['Standard', 'Fat Sat', 'Water Sat'] },
+            { id: 'darkBlood', label: 'Dark Blood', val: state.darkBlood, type: 'checkbox' },
+            { id: 'bloodSuppression', label: 'Blood Suppression', val: state.bloodSuppression, type: 'select', options: ['Off', 'On'] }
+        ]},
+        { section: 'Dynamic', fields:[
+            { id: 'dynamicMode', label: 'Dynamic Mode', val: state.dynamicMode, type: 'select', options: ['Standard', 'Free Breathing'] },
+            { id: 'measurements', label: 'Measurements', val: state.measurements, type: 'number', step: 1 },
+            { id: 'multipleSeries', label: 'Multiple Series', val: state.multipleSeries, type: 'select', options: ['Off', 'Each Measurement'] },
+            { id: 'reordering', label: 'Reordering', val: state.reordering, type: 'select', options: ['Linear', 'Centric'] }
         ]}
     ],
     resolution: [
-        { section: 'Resolution', fields:[
-            { id: 'baseRes', label: 'Base Resolution', val: state.baseRes, type: 'number' },
-            { id: 'phaseResPct', label: 'Phase Resolution %', val: state.phaseResPct, type: 'number' },
-            { id: 'sliceResPct', label: 'Slice Resolution % (3D)', val: state.sliceResPct, type: 'number' }
+        { section: 'Common', fields:[
+            { id: 'fovRead', label: 'FOV Read mm', val: state.fovRead, type: 'number' },
+            { id: 'fovPhasePct', label: 'FOV Phase %', val: state.fovPhasePct, type: 'number' },
+            { id: 'sliceThick', label: 'Slice Thickness mm', val: state.sliceThick, type: 'number' },
+            { id: 'baseRes', label: 'Base Resolution (Nx)', val: state.baseRes, type: 'number', step: 64 },
+            { id: 'phaseResPct', label: 'Phase Resolution %', val: state.phaseResPct, type: 'number', step: 5 },
+            { id: 'sliceResPct', label: 'Slice Resolution %', val: state.sliceResPct, type: 'number', step: 5 },
+            { id: 'interp', label: 'Interpolation', val: state.interp, type: 'select', options: ['0', '1'] }
         ]},
         { section: 'Acceleration', fields:[
-            { id: 'accelType', label: 'Mode', val: state.accelType, type: 'select', options: ['Off', 'GRAPPA', 'CS'] },
-            { id: 'accelR', label: 'Acceleration Factor', val: state.accelR, type: 'number', step: 1 }
+            { id: 'accelType', label: 'Acceleration Mode', val: state.accelType, type: 'select', options:['None', 'GRAPPA', 'CAIPIRINHA', 'CS'] },
+            { id: 'accelR', label: 'Total Factor R', val: state.accelR, type: 'number', readOnly: true },
+            { id: 'refScans', label: 'Reference Scans', val: state.refScans, type: 'text' },
+            { id: 'accelPE', label: 'Acceleration Factor PE', val: state.accelPE, type: 'number', step: 1 },
+            { id: 'refLinesPE', label: 'Reference Lines PE', val: state.refLinesPE, type: 'number', step: 2 },
+            { id: 'accel3D', label: 'Acceleration Factor 3D', val: state.accel3D, type: 'number', step: 1 },
+            { id: 'refLines3D', label: 'Reference Lines 3D', val: state.refLines3D, type: 'number', step: 2 },
+            { id: 'reorderShift3D', label: 'Reordering Shift 3D', val: state.reorderShift3D, type: 'number', step: 1 },
+            { id: 'phasePartial', label: 'Phase Partial Fourier %', val: state.phasePartial, type: 'number', step: 12.5 },
+            { id: 'slicePartial', label: 'Slice Partial Fourier %', val: state.slicePartial, type: 'number', step: 12.5 },
+            { id: 'csFactor', label: 'CS Factor', val: state.csFactor, type: 'range', min: 1, max: 10, step: 0.1 }
         ]}
     ],
-    geometry:[
+    geometry: [
         { section: 'Geometry', fields:[
-            { id: 'phaseOS', label: 'Phase Oversampling %', val: state.phaseOS, type: 'number', step: 10 },
-            { id: 'sliceOS', label: 'Slice Oversampling %', val: state.sliceOS, type: 'number', step: 10 }
-        ]}
-    ],
-    system: [
-        { section: 'System', fields:[
-            { label: 'B0 Field', val: '3.0 Tesla', type: 'text', readOnly: true },
-            { id: 'coilElements', label: 'Coil', val: state.coilElements, type: 'text' }
+            { id: 'slabGroup', label: 'Slab Group', val: state.slabGroup, type: 'text' },
+            { id: 'slabs', label: 'Slabs', val: state.slabs, type: 'number' },
+            { id: 'slices', label: 'Slices', val: state.slices, type: 'number' },
+            { id: 'position', label: 'Position', val: state.position, type: 'text' },
+            { id: 'orientation', label: 'Orientation', val: state.orientation, type: 'select', options: ['Transversal', 'Coronal', 'Sagittal'] },
+            { id: 'phaseEncDir', label: 'Phase Enc Dir', val: state.phaseEncDir, type: 'text' },
+            { id: 'phaseOS', label: 'Phase OS %', val: state.phaseOS, type: 'number' },
+            { id: 'sliceOS', label: 'Slice OS %', val: state.sliceOS, type: 'number' },
+            { id: 'fovRead', label: 'FOV Read', val: state.fovRead, type: 'number' },
+            { id: 'fovPhasePct', label: 'FOV Phase %', val: state.fovPhasePct, type: 'number' },
+            { id: 'sliceThick', label: 'Slice Thick mm', val: state.sliceThick, type: 'number' },
+            { id: 'tr', label: 'TR ms', val: state.tr, type: 'number' },
+            { id: 'conc', label: 'Concatenations', val: state.conc, type: 'number' }
         ]}
     ],
     physio:[
         { section: 'Physio', fields:[
-            { id: 'darkBlood', label: 'Dark Blood', val: state.darkBlood, type: 'checkbox' }
+            { id: 'tr', label: 'TR ms', val: state.tr, type: 'number' },
+            { id: 'fovReadPhaseText', label: 'FOV Read / Phase', val: state.fovReadPhaseText, type: 'text', readOnly: true },
+            { id: 'phaseResPct', label: 'Phase Resolution %', val: state.phaseResPct, type: 'number' }
         ]}
     ],
     sequence:[
         { section: 'Sequence', fields:[
+            { id: 'seqName', label: 'Sequence Name', val: state.seqName, type: 'text' },
             { id: 'dimension', label: 'Dimension', val: state.dimension, type: 'select', options: ['2D', '3D'] },
+            { id: 'bw', label: 'Bandwidth (Hz/Px)', val: state.bw, type: 'number', step: 10 },
+            { id: 'echoSpacing', label: 'Echo Spacing (ms)', val: state.echoSpacing, type: 'number', step: 0.1 },
             { id: 'turboFactor', label: 'Turbo Factor (ETL)', val: state.turboFactor, type: 'number', step: 1 },
-            { id: 'bw', label: 'Bandwidth Hz/Px', val: state.bw, type: 'number', step: 10 }
+            { id: 'echoTrainDuration', label: 'Echo Train Duration', val: state.echoTrainDuration, type: 'number', step: 10 }
         ]}
     ],
-    setup:[
-        { section: 'Patient Setup', fields:[
-            { id: 'region', label: 'Anatomical Region', val: state.region, type: 'select', options: ['abdomen', 'pelvis', 'thorax', 'head'] },
-            { id: 'patWeight', label: 'Weight (kg)', val: state.patWeight, type: 'number' },
-            { id: 'patHeight', label: 'Height (cm)', val: state.patHeight, type: 'number' },
+    setup: [
+        { section: 'Setup', fields:[
+            { id: 'region', label: 'Distretto Anatomico', val: state.region, type: 'select', options:['abdomen', 'pelvis', 'thorax', 'head'] },
+            { id: 'patWeight', label: 'Peso (kg)', val: state.patWeight, type: 'number', step: 1 },
+            { id: 'patHeight', label: 'Altezza (cm)', val: state.patHeight, type: 'number', step: 1 },
             { id: 'autoIsoBtn', label: 'AUTO ISO', val: 'AUTO ISO', type: 'button', action: 'autoIso()' }
         ]}
     ]
 };
 
-// --- LOGIN ---
+// --- 3. LOGIN RESTORATION ---
 document.getElementById('login-btn').addEventListener('click', checkPassword);
-document.getElementById('login-pwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkPassword(); });
+document.getElementById('login-pwd').addEventListener('keydown', (e) => { 
+    if (e.key === 'Enter') checkPassword(); 
+});
 
 function checkPassword() {
     if (document.getElementById('login-pwd').value === 'simulatore') {
@@ -100,7 +150,16 @@ function checkPassword() {
     }
 }
 
-// --- TAB RENDERING ---
+// --- 4. UI TAB RENDERING & FOCUS PRESERVATION ---
+function switchTab(tabKey) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active', 'bg-slate-800', 'border-blue-500', 'text-white');
+    });
+    const btn = document.querySelector(`[data-target="${tabKey}"]`);
+    if(btn) btn.classList.add('active', 'bg-slate-800', 'border-blue-500', 'text-white');
+    renderTabContent(tabKey);
+}
+
 function renderTabContent(tabKey) {
     const container = document.getElementById('parameters-container');
     container.innerHTML = '';
@@ -108,22 +167,25 @@ function renderTabContent(tabKey) {
 
     config[tabKey].forEach(sec => {
         let html = `<h3 class="text-xs font-bold text-blue-500 mb-3 uppercase border-b border-slate-700 pb-1">${sec.section}</h3><div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">`;
+        
         sec.fields.forEach(f => {
             let val = state[f.id] !== undefined ? state[f.id] : f.val;
             let inp = '';
             
             if (f.type === 'select') {
-                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs text-slate-200">
-                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs text-slate-200 outline-none">
+                    ${f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+            } else if (f.type === 'range') {
+                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500"><span id="val-${f.id}" class="text-xs font-mono text-blue-400 w-8 text-right">${val}</span></div>`;
             } else if (f.type === 'checkbox') {
-                inp = `<input type="checkbox" id="inp-${f.id}" onchange="updateState('${f.id}', this.checked)" ${val ? 'checked' : ''} class="mt-1 w-4 h-4 accent-blue-500 bg-slate-900 border border-slate-700 rounded">`;
+                inp = `<input type="checkbox" id="inp-${f.id}" onchange="updateState('${f.id}', this.checked)" ${val ? 'checked' : ''} class="mt-1 w-4 h-4 accent-blue-500 bg-slate-900 border border-slate-700 rounded cursor-pointer outline-none">`;
             } else if (f.type === 'button') {
                 inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500 outline-none transition-colors">${f.label}</button>`;
             } else {
-                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} ${f.readOnly ? 'readonly' : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs text-slate-200 ${f.readOnly ? 'text-slate-500' : ''}">`;
+                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} ${f.readOnly ? 'readonly' : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs text-slate-200 outline-none ${f.readOnly ? 'text-slate-500 bg-slate-950 cursor-not-allowed' : ''}">`;
             }
 
-            html += `<div class="flex flex-col gap-1 justify-end">
+            html += `<div class="flex flex-col gap-1 justify-end wrapper-${f.id}">
                 ${f.type !== 'button' ? `<label class="text-[10px] uppercase text-slate-400">${f.label}</label>` : ''}${inp}</div>`;
         });
         container.innerHTML += `<div class="mb-6">${html}</div></div>`;
@@ -132,31 +194,34 @@ function renderTabContent(tabKey) {
     applyUIConstraints();
 }
 
-function switchTab(tabKey) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'bg-slate-800', 'border-blue-500', 'text-white'));
-    const btn = document.querySelector(`[data-target="${tabKey}"]`);
-    if(btn) btn.classList.add('active', 'bg-slate-800', 'border-blue-500', 'text-white');
-    renderTabContent(tabKey);
-}
-
-// --- UPDATE STATE (Fix Focus Bug) ---
 function updateState(key, value) {
+    // Preserve Data Types
+    const stringKeys =['slabGroup', 'position', 'orientation', 'phaseEncDir', 'autoAlign', 'coilElements', 'saturation', 'dynamicMode', 'multipleSeries', 'reordering', 'interp', 'accelType', 'refScans', 'seqName', 'dimension', 'region', 'fovReadPhaseText', 'bloodSuppression'];
+    
     if (typeof value === 'boolean') {
         state[key] = value;
-    } else if (['dimension', 'orientation', 'saturation', 'accelType', 'region'].includes(key)) {
+    } else if (stringKeys.includes(key)) {
         state[key] = value;
     } else {
         state[key] = parseFloat(value) || 0;
     }
     
-    // Update DOM strictly by ID to keep focus
+    // Non-destructive DOM sync
     document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => {
-        if(el.type === 'checkbox') el.checked = value;
-        else if (el.value != value) el.value = value;
+        if (el.type === 'checkbox') {
+            if (el.checked !== value) el.checked = value;
+        } else {
+            if (el.value != value) el.value = value;
+        }
     });
-    
+
+    // Update range numeric indicator
+    const rangeVal = document.getElementById(`val-${key}`);
+    if (rangeVal) rangeVal.innerText = state[key];
+
+    // Compute physics & adjust UI constraints
     calculatePhysics();
-    applyUIConstraints(); 
+    applyUIConstraints();
 }
 
 function autoIso() {
@@ -169,219 +234,159 @@ function autoIso() {
 
 function applyUIConstraints() {
     const is2D = state.dimension === '2D';
-    document.querySelectorAll('[id="inp-slabs"],[id="inp-sliceResPct"]').forEach(el => {
-        el.disabled = is2D;
-        if(el.closest('.flex-col')) el.closest('.flex-col').style.opacity = is2D ? '0.3' : '1';
+    const isCS = state.accelType === 'CS';
+    const isNone = state.accelType === 'None';
+
+    // Toggle 3D Specific fields
+    const fields3D =['slabs', 'sliceResPct', 'accel3D', 'refLines3D', 'reorderShift3D', 'slicePartial', 'sliceOS'];
+    fields3D.forEach(id => {
+        document.querySelectorAll(`[id="inp-${id}"]`).forEach(el => {
+            el.disabled = is2D;
+            const wrapper = el.closest(`.wrapper-${id}`);
+            if (wrapper) wrapper.style.opacity = is2D ? '0.3' : '1';
+        });
     });
+
+    // Handle Acceleration Constraints
+    document.querySelectorAll(`[id="inp-csFactor"]`).forEach(el => {
+        const wrapper = el.closest(`.wrapper-csFactor`);
+        if (wrapper) wrapper.style.display = isCS ? 'flex' : 'none';
+    });
+
+    const standardPIFields =['accelPE', 'refLinesPE'];
+    standardPIFields.forEach(id => {
+        document.querySelectorAll(`[id="inp-${id}"]`).forEach(el => {
+            const disable = isCS || isNone;
+            el.disabled = disable;
+            const wrapper = el.closest(`.wrapper-${id}`);
+            if (wrapper) wrapper.style.opacity = disable ? '0.3' : '1';
+        });
+    });
+
+    // Update derived values safely
+    state.fovReadPhaseText = `${state.fovRead} / ${state.fovPhasePct} %`;
+    document.querySelectorAll(`[id="inp-fovReadPhaseText"]`).forEach(el => el.value = state.fovReadPhaseText);
 }
 
-// --- PHYSICS ENGINE ---
-const TISSUE_DB = {
-    // 3 Tesla values (T1 ms, T2 ms, PD relative to water=1.0)
-    fluid: { t1: 4000, t2: 2000, pd: 1.0 },       // LCR, Urine, Bile (Level 4 in T2, 0/1 in T1)
-    fat: { t1: 300, t2: 80, pd: 1.0 },            // Subcutaneous Fat (Level 3/4 in T2, 4 in T1)
-    liver: { t1: 800, t2: 40, pd: 0.85 },         // Liver (Level 1 in T2, 3 in T1)
-    spleen: { t1: 1100, t2: 100, pd: 0.85 },      // Spleen (Level 2/3 in T2, 2 in T1)
-    kidney_c: { t1: 1000, t2: 70, pd: 0.85 },     // Cortex (Level 3 in T2, 1/2 in T1)
-    kidney_m: { t1: 1200, t2: 90, pd: 0.85 },     // Medulla
-    muscle: { t1: 900, t2: 45, pd: 0.8 },         // Muscle
-    bone: { t1: 2000, t2: 10, pd: 0.1 },          // Cortical Bone (Level 0)
-    marrow: { t1: 400, t2: 80, pd: 0.9 },         // Bone Marrow (Fatty)
-    pz: { t1: 1200, t2: 130, pd: 0.85 },          // Prostate PZ (Level 3 in T2)
-    tz: { t1: 1000, t2: 80, pd: 0.8 },            // Prostate TZ (Level 1/2 in T2)
-    lung: { t1: 1200, t2: 30, pd: 0.2 },          // Lung (Signal void mostly)
-    heart: { t1: 900, t2: 50, pd: 0.8 },          // Myocardium
-    blood: { t1: 1500, t2: 250, pd: 1.0 },        // Blood (Dynamic flow void applied later)
-    wm: { t1: 800, t2: 80, pd: 0.7 },             // White Matter (Level 1 in T2, 3 in T1)
-    gm: { t1: 1300, t2: 110, pd: 0.85 }           // Gray Matter (Level 2 in T2, 2 in T1)
-};
-
-// Equazione di Bloch approssimata per Spin Echo / Fast Spin Echo
-function calculateBlochSignal(tissueKey, tr, te) {
-    const t = TISSUE_DB[tissueKey];
-    if(!t) return 0;
-    
-    let pd = t.pd;
-    // Simulazione Fat Saturation
-    if (state.saturation === 'Fat Sat' && (tissueKey === 'fat' || tissueKey === 'marrow')) {
-        pd *= 0.1; 
-    }
-    // Simulazione Flow Void (Dark Blood) in TSE
-    if (tissueKey === 'blood' && !state.darkBlood) {
-        pd *= 0.2; // Spoil naturale del flusso in TSE senza compensazione
-    }
-
-    // Equazione: S = PD * (1 - exp(-TR/T1)) * exp(-TE/T2)
-    const t1Recovery = 1.0 - Math.exp(-tr / t.t1);
-    const t2Decay = Math.exp(-te / t.t2);
-    
-    let signal = pd * t1Recovery * t2Decay;
-    
-    // Normalizzazione per scalare visivamente su RGB (0-255) mappato su Scala 0-4
-    // Il liquido puro in T2 (TR=4000, TE=100) da signal ~ 0.95 -> Bianco
-    const maxReferenceSignal = 0.95; 
-    let normalized = Math.min(1.0, signal / maxReferenceSignal);
-    
-    const gray = Math.round(normalized * 255);
-    return `rgb(${gray}, ${gray}, ${gray})`;
-}
-
+// --- 5. STRICT PHYSICS & MATHEMATICS ENGINE ---
 function calculatePhysics() {
-    const is3D = state.dimension === '3D';
-    const accelR = state.accelType === 'Off' ? 1 : state.accelR;
-    
-    // Risoluzione
+    // A. Matrice Effettiva
     const N_x = state.baseRes;
-    const N_y = Math.round(state.baseRes * (state.fovPhasePct / 100) * (state.phaseResPct / 100));
-    const N_z = is3D ? Math.round(state.slices * (state.sliceResPct / 100)) : 1;
+    const fovPhase = state.fovPhasePct / 100;
+    const phaseRes = state.phaseResPct / 100;
+    const phaseOS = 1 + (state.phaseOS / 100);
+    const phasePartial = state.phasePartial / 100;
 
-    const dx = state.fovRead / N_x;
-    let dy = (state.fovRead * (state.fovPhasePct / 100)) / N_y;
-    if (state.fovPhasePct === 100 && state.phaseResPct === 100) dy = dx; 
-    const dz = state.sliceThick;
+    const effNy = N_x * fovPhase * phaseRes * phaseOS * phasePartial;
 
-    // Tempo di Acquisizione
-    let totalLines = N_y;
-    if (is3D) totalLines *= N_z * state.slabs;
-    else totalLines *= state.slices;
-    
-    const shots = totalLines / (state.turboFactor * accelR);
-    let taSeconds = 0;
-    
-    if (is3D) {
-        taSeconds = shots * state.tr * state.nex / 1000;
-    } else {
-        const slicesPerTR = Math.max(1, Math.floor(state.tr / (state.echoSpacing * state.turboFactor + 10)));
-        taSeconds = (shots / slicesPerTR) * state.tr * state.nex / 1000;
+    let effNz = 1;
+    if (state.dimension === '3D') {
+        const sliceOS = 1 + (state.sliceOS / 100);
+        const slicePartial = state.slicePartial / 100;
+        effNz = state.slices * sliceOS * slicePartial;
     }
 
-    // SAR Base (approssimazione Vida 3T)
+    // Risoluzione Voxel
+    const dx = state.fovRead / N_x;
+    const nominalNy = N_x * fovPhase * phaseRes;
+    const dy = (state.fovRead * fovPhase) / nominalNy; 
+
+    let dz = 0;
+    if (state.dimension === '3D') {
+        const slabThickness = state.slices * state.sliceThick;
+        dz = slabThickness / effNz;
+    } else {
+        dz = state.sliceThick;
+    }
+
+    const Voxel = dx * dy * dz;
+    const isIsotropic = Math.abs(dx - dy) <= 0.05 && Math.abs(dx - dz) <= 0.05;
+
+    // B. Accelerazione (R_eff e g-factor)
+    let R_eff = 1.0;
+    let g = 1.0;
+
+    if (state.accelType === 'CS') {
+        R_eff = state.csFactor;
+        g = 1.0;
+    } else if (state.accelType === 'GRAPPA') {
+        R_eff = state.dimension === '3D' ? (state.accelPE * state.accel3D) : state.accelPE;
+        g = 1.0 + (R_eff - 1) * 0.15;
+    } else if (state.accelType === 'CAIPIRINHA') {
+        R_eff = state.dimension === '3D' ? (state.accelPE * state.accel3D) : state.accelPE;
+        g = 1.0 + (R_eff - 1) * 0.05;
+    }
+    
+    // Sync R_eff into the UI read-only field
+    updateState('accelR', parseFloat(R_eff.toFixed(2)));
+
+    // C. Tempo di Acquisizione (TA)
+    let Shots = 0;
+    let TA_sec = 0;
+
+    if (state.dimension === '3D') {
+        Shots = (effNy * effNz) / (state.turboFactor * R_eff);
+        // Multiply by slabs if multiple slabs configured
+        Shots *= state.slabs;
+        TA_sec = (Shots * state.tr * state.nex) / 1000;
+    } else {
+        Shots = effNy / (state.turboFactor * R_eff);
+        let maxSlicesPerTR = Math.floor(state.tr / ((state.echoSpacing * state.turboFactor) + 20));
+        maxSlicesPerTR = Math.max(1, maxSlicesPerTR); // Prevent div by zero
+        TA_sec = (Shots * state.tr * state.nex * Math.ceil(state.slices / maxSlicesPerTR)) / 1000;
+    }
+
+    // D. Equazione del Signal-to-Noise Ratio (SNR)
+    const TermineAcq = (effNy * effNz * state.nex) / (state.bw * 14500);
+    const SNR_base = (Voxel / 0.64) * Math.sqrt(TermineAcq) * Math.exp(-state.te / 85) * 3.5;
+
+    let SNR_final = 0;
+    if (state.accelType === 'CS') {
+        SNR_final = (SNR_base / Math.sqrt(state.csFactor)) * 1.2;
+    } else {
+        SNR_final = SNR_base / (g * Math.sqrt(R_eff));
+    }
+
+    // SAR Base Estimate (just for UI completeness, standard clinical approximation)
     const bmi = state.patWeight / Math.pow(state.patHeight / 100, 2);
     let sar = (0.002 * state.turboFactor * bmi / (state.tr / 1000)) * Math.pow(state.flipAngle / 90, 2);
-    if(is3D) sar *= state.slabs;
+    if (state.dimension === '3D') sar *= state.slabs;
 
-    // SNR
-    const voxelVol = dx * dy * dz;
-    const isIso = Math.abs(dx - dy) < 0.1 && Math.abs(dx - dz) < 0.1;
-    let snr = voxelVol * Math.sqrt(state.nex) * Math.sqrt(1 / state.bw);
-    if (accelR > 1) snr /= Math.sqrt(accelR);
-
-    // Update UI
-    document.getElementById('out-ta').innerText = `${Math.floor(taSeconds / 60)}:${Math.round(taSeconds % 60).toString().padStart(2, '0')}`;
-    let totalSlices = is3D ? state.slabs * state.slices : state.slices;
-    document.getElementById('out-etl').innerText = `${totalSlices} sl / ${state.turboFactor} etl`;
-    document.getElementById('out-res').innerText = `${dx.toFixed(1)}×${dy.toFixed(1)}×${dz.toFixed(1)} mm`;
-    document.getElementById('out-snr-final').innerText = snr.toFixed(2);
+    // --- DOM OUTPUT UPDATES ---
+    const taMin = Math.floor(TA_sec / 60);
+    const taSec = Math.round(TA_sec % 60).toString().padStart(2, '0');
     
+    document.getElementById('out-ta').innerText = `${taMin}:${taSec}`;
+    document.getElementById('out-res').innerText = `${dx.toFixed(2)} × ${dy.toFixed(2)} × ${dz.toFixed(2)} mm`;
+    document.getElementById('out-snr-final').innerText = SNR_final.toFixed(2);
+    
+    let totalSlices = state.dimension === '3D' ? (state.slabs * state.slices) : state.slices;
+    document.getElementById('out-etl').innerText = `${totalSlices} sl / ${state.turboFactor} etl`;
+
     const sarEl = document.getElementById('out-sar');
-    const banner = document.getElementById('alert-banner');
     sarEl.innerText = sar.toFixed(2);
-    if (sar > 3.2) {
-        sarEl.className = 'font-mono text-sm text-red-400 font-bold border-b border-red-500 animate-pulse';
-        banner.classList.remove('hidden');
-    } else {
-        sarEl.className = 'font-mono text-sm text-slate-200 border-b border-transparent';
-        banner.classList.add('hidden');
-    }
+    sarEl.className = sar > 3.2 
+        ? 'font-mono text-sm text-red-400 font-bold border-b border-red-500 animate-pulse' 
+        : 'font-mono text-sm text-slate-200 border-b border-transparent';
 
     const isoEl = document.getElementById('out-iso');
-    isoEl.innerText = isIso ? 'ISO ✅' : 'ANISO';
-    isoEl.className = `font-bold text-[10px] ${isIso ? 'text-green-500' : 'text-yellow-600'}`;
+    isoEl.innerText = isIsotropic ? 'ISO ✅' : 'ANISO';
+    isoEl.className = `font-bold text-[10px] ${isIsotropic ? 'text-green-500' : 'text-yellow-600'}`;
 
-    renderSVGPhantom();
+    // Update phantom visual rendering logic if function exists (assuming it is maintained externally as requested)
+    if (typeof renderSVGPhantom === 'function') {
+        renderSVGPhantom();
+    }
 }
 
-function renderSVGPhantom() {
-    // Nascondi tutti i gruppi e legende
-    document.querySelectorAll('g[id^="group-"]').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('div[id^="legend-"]').forEach(el => el.classList.add('hidden'));
-
-    // Mostra gruppo attivo basato su Region e Orientation
-    const targetGroupId = `group-${state.region}-${state.orientation}`;
-    const activeGroup = document.getElementById(targetGroupId);
-    if(activeGroup) activeGroup.classList.remove('hidden');
-
-    const activeLegend = document.getElementById(`legend-${state.region}`);
-    if(activeLegend) activeLegend.classList.remove('hidden');
-
-    document.getElementById('phantom-title').innerText = `${state.region} ${state.orientation}`;
-
-    // Applica Colori Bloch ai path attivi (Ottimizzato)
-    const applyColor = (prefix, suffix, tissueKey) => {
-        const el = document.getElementById(`${prefix}-${suffix}`);
-        if(el) {
-            const color = calculateBlochSignal(tissueKey, state.tr, state.te);
-            el.setAttribute('fill', color);
-            // Aggiorna anche quadratino legenda se esiste
-            const leg = document.getElementById(`leg-${prefix.split('-')[0]}-${suffix}`);
-            if(leg) leg.style.backgroundColor = color;
-        }
-    };
-
-    if (state.region === 'abdomen') {
-        let pf = state.orientation === 'Transversal' ? 'abd-ax' : (state.orientation === 'Coronal' ? 'abd-cor' : 'abd-sag');
-        applyColor(pf, 'fat', 'fat');
-        applyColor(pf, 'muscle', 'muscle');
-        applyColor(pf, 'liver', 'liver');
-        applyColor(pf, 'spleen', 'spleen');
-        applyColor(pf, 'rk-cortex', 'kidney_c');
-        applyColor(pf, 'rk-medulla', 'kidney_m');
-        applyColor(pf, 'lk-cortex', 'kidney_c');
-        applyColor(pf, 'lk-medulla', 'kidney_m');
-        applyColor(pf, 'spine', 'marrow');
-        applyColor(pf, 'aorta', 'blood');
-        applyColor(pf, 'fluid', 'fluid'); // Usa suffisso fluid per la legenda (Bile)
-        
-        // Colora manuale per la legenda per compatibilità
-        const legC = calculateBlochSignal('kidney_c', state.tr, state.te);
-        if(document.getElementById('leg-abd-kidney')) document.getElementById('leg-abd-kidney').style.backgroundColor = legC;
-    } 
-    else if (state.region === 'pelvis') {
-        let pf = state.orientation === 'Transversal' ? 'pel-ax' : (state.orientation === 'Coronal' ? 'pel-cor' : 'pel-sag');
-        applyColor(pf, 'fat', 'fat');
-        applyColor(pf, 'muscle', 'muscle');
-        applyColor(pf, 'bladder', 'fluid');
-        applyColor(pf, 'pz', 'pz');
-        applyColor(pf, 'tz', 'tz');
-        applyColor(pf, 'rectum', 'muscle');
-        applyColor(pf, 'spine', 'marrow');
-        applyColor(pf, 'bone-cortex', 'bone');
-        applyColor(pf, 'femur-l', 'marrow');
-        applyColor(pf, 'femur-r', 'marrow');
-        applyColor(pf, 'penis', 'muscle');
-    }
-    else if (state.region === 'head') {
-        let pf = state.orientation === 'Transversal' ? 'head-ax' : (state.orientation === 'Coronal' ? 'head-cor' : 'head-sag');
-        applyColor(pf, 'fat', 'fat');
-        applyColor(pf, 'bone', 'bone');
-        applyColor(pf, 'csf', 'fluid');
-        applyColor(pf, 'ventricles', 'fluid');
-        applyColor(pf, 'gm', 'gm');
-        applyColor(pf, 'wm', 'wm');
-    }
-    else if (state.region === 'thorax') {
-        let pf = state.orientation === 'Transversal' ? 'tho-ax' : (state.orientation === 'Coronal' ? 'tho-cor' : 'tho-sag');
-        applyColor(pf, 'fat', 'fat');
-        applyColor(pf, 'muscle', 'muscle');
-        applyColor(pf, 'lung-l', 'lung');
-        applyColor(pf, 'lung-r', 'lung');
-        applyColor(pf, 'heart', 'heart');
-        applyColor(pf, 'blood', 'blood');
-        applyColor(pf, 'aorta', 'blood');
-        applyColor(pf, 'spine', 'marrow');
-    }
-
-    // Effetti rumore/blur
-    let noiseOpacity = state.snr < 0.5 ? 0.3 : (state.snr < 1.0 ? 0.1 : 0);
-    document.getElementById('ph-noise').setAttribute('opacity', noiseOpacity);
-    document.getElementById('phantom-container').style.filter = state.accelType === 'CS' ? 'blur(0.5px) contrast(110%)' : 'none';
-}
-
-// --- INIT ---
+// --- 6. INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => { 
+    // Setup Tab listeners once
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => switchTab(e.target.dataset.target));
     });
+    
+    // Mount initial view
     switchTab('routine'); 
     calculatePhysics(); 
 });

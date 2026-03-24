@@ -177,15 +177,35 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 document.getElementById('pat-weight').addEventListener('input', calculatePhysics);
 document.getElementById('pat-height').addEventListener('input', calculatePhysics);
 
-function getSignalIntensity(t1, t2, pd = 1.0, overrideTR = null, overrideTE = null, isFat = false) {
+// ==========================================
+// CORE PHYSICS LOGIC & API FETCH
+// ==========================================
+
+async function fetchSignalFromJava(t1, t2, pd, tr, te, isFat) {
+    // SATURATION LOGIC UI -> Engine (Forza spegnimento segnale)
     if (state.saturation === 'Fat Sat' && isFat) return `rgb(10, 10, 10)`;
     if (state.saturation === 'Water Sat' && !isFat) return `rgb(10, 10, 10)`;
 
-    const effTR = overrideTR !== null ? overrideTR : state.tr;
-    const effTE = overrideTE !== null ? overrideTE : state.te;
-    const signal = pd * (1 - Math.exp(-effTR / t1)) * Math.exp(-effTE / t2);
-    const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
-    return `rgb(${gray}, ${gray}, ${gray})`;
+    try {
+        // Chiamata REST all'API ospitata su Render
+        const url = `${API_URL}?pd=${pd}&t1=${t1}&t2=${t2}&tr=${tr}&te=${te}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) throw new Error("API call failed");
+        const data = await response.json();
+        
+        // Estrazione Magnitudine Segnale
+        const signal = data.Signal;
+        
+        // Mapping visivo per la UI con moltiplicatore dinamico
+        const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
+        return `rgb(${gray}, ${gray}, ${gray})`;
+    } catch (err) {
+        // Fallback locale equazione di Bloch se il backend Java non risponde
+        const signal = pd * (1 - Math.exp(-tr / t1)) * Math.exp(-te / t2);
+        const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
+        return `rgb(${gray}, ${gray}, ${gray})`;
+    }
 }
 
 async function calculatePhysics() {
@@ -229,7 +249,8 @@ async function calculatePhysics() {
 
     const weight = parseFloat(document.getElementById('pat-weight').value) || 75;
     const height = parseFloat(document.getElementById('pat-height').value) || 175;
-    const sar = (0.002 * state.turboFactor * (weight / Math.pow(height/100, 2)) / (state.tr / 1000)) * Math.pow(state.flipAngle / 180, 2);
+    const bmi = weight / Math.pow(height/100, 2);
+    const sar = (0.002 * state.turboFactor * bmi / (state.tr / 1000)) * Math.pow(state.flipAngle / 180, 2);
 
     const bwHzPx = state.bw / N_y; 
     const acqTerm = is3D ? (state.nex * N_y * N_z) / 14500 : (state.nex * N_y) / 14500;
@@ -246,6 +267,7 @@ async function calculatePhysics() {
         snrFinal *= (1 / (g_eff * Math.sqrt(effR)));
     }
 
+    // Dashboard Update
     document.getElementById('out-ta').innerText = `${Math.floor(taSeconds / 60)}:${Math.round(taSeconds % 60).toString().padStart(2, '0')}`;
     document.getElementById('out-etl').innerText = `${state.turboFactor} / ${Math.ceil(displayedShots)}`;
     document.getElementById('out-res').innerText = `${dx.toFixed(2)} × ${dy.toFixed(2)} × ${dz.toFixed(2)} mm`;
@@ -261,10 +283,11 @@ async function calculatePhysics() {
     isoEl.innerText = isIsotropic ? 'ISO ✅' : 'ANISO';
     isoEl.className = `font-bold text-[10px] ${isIsotropic ? 'text-green-500' : 'text-yellow-600'}`;
 
-    updatePhantom(snrFinal, bwHzPx);
+    await renderSVGPhantom(snrFinal, bwHzPx);
 }
 
-function updatePhantom(snrFinal, bwHzPx) {
+// RENDERING ASINCRONO SVG PHANTOM (MULTIPLE FETCHES)
+async function renderSVGPhantom(snrFinal, bwHzPx) {
     document.querySelectorAll('g[id^="ph-group-"]').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('div[id^="legend-"]').forEach(el => el.classList.add('hidden'));
 
@@ -289,11 +312,8 @@ function updatePhantom(snrFinal, bwHzPx) {
         else viewId = 'head-axial'; 
     }
 
-    const activeGroup = document.getElementById(`ph-group-${viewId}`);
-    if(activeGroup) activeGroup.classList.remove('hidden');
-
-    const activeLegend = document.getElementById(`legend-${legendId}`);
-    if(activeLegend) activeLegend.classList.remove('hidden');
+    document.getElementById(`ph-group-${viewId}`).classList.remove('hidden');
+    document.getElementById(`legend-${legendId}`).classList.remove('hidden');
 
     const titles = { 
         'abdomen-axial': 'Axial Abdomen', 
@@ -309,178 +329,133 @@ function updatePhantom(snrFinal, bwHzPx) {
     };
     document.getElementById('phantom-title').innerText = titles[viewId] || titles[state.region];
 
+    // --- CALCOLO COLORI (FETCH PARALLELI) ---
     if (state.region === 'abdomen') {
-        const colors = {
-            liver: getSignalIntensity(1200, 160, 0.85, null, null, false), 
-            spleen: getSignalIntensity(1000, 120, 0.90, null, null, false),
-            kidney_cortex: getSignalIntensity(1100, 130, 0.90, null, null, false),
-            kidney_medulla: getSignalIntensity(1100, 130, 0.90, null, null, false), 
-            muscle: getSignalIntensity(900, 50, 0.80, null, null, false),
-            fat: getSignalIntensity(250, 80, 1.0, null, null, true),
-            spine: getSignalIntensity(300, 60, 0.80, null, null, false)
-        };
+        const[c_liver, c_spleen, c_kidney_c, c_kidney_m, c_muscle, c_fat, c_spine] = await Promise.all([
+            fetchSignalFromJava(810, 42, 0.85, state.tr, state.te, false),
+            fetchSignalFromJava(1000, 80, 0.90, state.tr, state.te, false),
+            fetchSignalFromJava(1100, 95, 0.90, state.tr, state.te, false),
+            fetchSignalFromJava(1100, 130, 0.95, state.tr, state.te, false),
+            fetchSignalFromJava(900, 50, 0.80, state.tr, state.te, false),
+            fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
+            fetchSignalFromJava(300, 60, 0.80, state.tr, state.te, false)
+        ]);
         
-        document.getElementById('ph-abd-ax-liver')?.setAttribute('fill', colors.liver);
-        document.getElementById('ph-abd-ax-spleen')?.setAttribute('fill', colors.spleen);
-        document.getElementById('ph-abd-ax-kidney-r-cortex')?.setAttribute('fill', colors.kidney_cortex);
-        document.getElementById('ph-abd-ax-kidney-r-medulla')?.setAttribute('fill', colors.kidney_medulla);
-        document.getElementById('ph-abd-ax-kidney-l-cortex')?.setAttribute('fill', colors.kidney_cortex);
-        document.getElementById('ph-abd-ax-kidney-l-medulla')?.setAttribute('fill', colors.kidney_medulla);
-        document.getElementById('ph-abd-ax-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-abd-ax-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-abd-ax-spine')?.setAttribute('fill', colors.spine);
+        document.querySelectorAll('[id$="-liver"]').forEach(el => el.setAttribute('fill', c_liver));
+        document.querySelectorAll('[id$="-spleen"]').forEach(el => el.setAttribute('fill', c_spleen));
+        document.querySelectorAll('[id$="-kidney-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
+        document.querySelectorAll('[id$="-kidney-r-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
+        document.querySelectorAll('[id$="-kidney-l-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
+        document.querySelectorAll('[id$="-kidney-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
+        document.querySelectorAll('[id$="-kidney-r-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
+        document.querySelectorAll('[id$="-kidney-l-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
+        document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
+        document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
+        document.querySelectorAll('[id$="-spine"]').forEach(el => el.setAttribute('fill', c_spine));
 
-        document.getElementById('ph-abd-cor-liver')?.setAttribute('fill', colors.liver);
-        document.getElementById('ph-abd-cor-spleen')?.setAttribute('fill', colors.spleen);
-        document.getElementById('ph-abd-cor-kidney-r-cortex')?.setAttribute('fill', colors.kidney_cortex);
-        document.getElementById('ph-abd-cor-kidney-r-medulla')?.setAttribute('fill', colors.kidney_medulla);
-        document.getElementById('ph-abd-cor-kidney-l-cortex')?.setAttribute('fill', colors.kidney_cortex);
-        document.getElementById('ph-abd-cor-kidney-l-medulla')?.setAttribute('fill', colors.kidney_medulla);
-        document.getElementById('ph-abd-cor-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-abd-cor-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-abd-cor-spine')?.setAttribute('fill', colors.spine);
-
-        document.getElementById('ph-abd-sag-liver')?.setAttribute('fill', colors.liver);
-        document.getElementById('ph-abd-sag-kidney-cortex')?.setAttribute('fill', colors.kidney_cortex);
-        document.getElementById('ph-abd-sag-kidney-medulla')?.setAttribute('fill', colors.kidney_medulla);
-        document.getElementById('ph-abd-sag-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-abd-sag-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-abd-sag-spine')?.setAttribute('fill', colors.spine);
-
-        if(document.getElementById('leg-abd-liver')) document.getElementById('leg-abd-liver').style.backgroundColor = colors.liver;
-        if(document.getElementById('leg-abd-spleen')) document.getElementById('leg-abd-spleen').style.backgroundColor = colors.spleen;
-        if(document.getElementById('leg-abd-kidney')) document.getElementById('leg-abd-kidney').style.backgroundColor = colors.kidney_cortex;
-        if(document.getElementById('leg-abd-fat')) document.getElementById('leg-abd-fat').style.backgroundColor = colors.fat;
+        document.getElementById('leg-abd-liver').style.backgroundColor = c_liver;
+        document.getElementById('leg-abd-spleen').style.backgroundColor = c_spleen;
+        document.getElementById('leg-abd-kidney').style.backgroundColor = c_kidney_c;
+        document.getElementById('leg-abd-fat').style.backgroundColor = c_fat;
     } 
     else if (state.region === 'pelvis') {
-        const colors = {
-            prostate_pz: getSignalIntensity(1200, 130, 0.9, null, null, false),
-            prostate_tz: getSignalIntensity(1000, 80, 0.8, null, null, false),
-            prostate_capsule: getSignalIntensity(800, 50, 0.7, null, null, false),
-            bladder: getSignalIntensity(3000, 1000, 1.0, null, null, false),
-            muscle: getSignalIntensity(900, 50, 0.8, null, null, false),
-            fat: getSignalIntensity(250, 80, 1.0, null, null, true),
-            bone_cortical: getSignalIntensity(2000, 10, 0.1, null, null, false),
-            bone_marrow: getSignalIntensity(350, 60, 1.0, null, null, true), 
-            rectum: getSignalIntensity(800, 50, 0.5, null, null, false),
-            sv: getSignalIntensity(1500, 150, 0.9, null, null, false),
-            penis: getSignalIntensity(900, 60, 0.8, null, null, false)
-        };
+        let t1pz = 1200, t2pz = 130, pdPz = 0.9;
+        let t1tz = 1000, t2tz = 80, pdTz = 0.8;
+        
+        // Dinamica Edema Prostatico T2
+        if (state.te >= 100) {
+            const edemaFactor = Math.min(2.0, 1.0 + ((state.te - 100) / 100)); 
+            t2pz = 180; pdPz = 0.9 * edemaFactor;
+            t2tz = 100; pdTz = 0.8 * edemaFactor;
+        }
 
-        document.getElementById('ph-pelvis-ax-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-pelvis-ax-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-pelvis-ax-bone-l')?.setAttribute('fill', colors.bone_cortical);
-        document.getElementById('ph-pelvis-ax-bone-r')?.setAttribute('fill', colors.bone_cortical);
-        document.getElementById('ph-pelvis-ax-rectum')?.setAttribute('fill', colors.rectum);
-        document.getElementById('ph-pelvis-ax-bladder')?.setAttribute('fill', colors.bladder);
-        document.getElementById('ph-pelvis-ax-prostate-pz')?.setAttribute('fill', colors.prostate_pz);
-        document.getElementById('ph-pelvis-ax-prostate-tz')?.setAttribute('fill', colors.prostate_tz);
-        document.getElementById('ph-pelvis-ax-prostate-capsule')?.setAttribute('fill', colors.prostate_capsule);
+        const[c_pz, c_tz, c_bladder, c_muscle, c_fat, c_bone, c_rectum] = await Promise.all([
+            fetchSignalFromJava(t1pz, t2pz, pdPz, state.tr, state.te, false),
+            fetchSignalFromJava(t1tz, t2tz, pdTz, state.tr, state.te, false),
+            fetchSignalFromJava(3000, 1000, 1.0, state.tr, state.te, false),
+            fetchSignalFromJava(900, 50, 0.8, state.tr, state.te, false),
+            fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
+            fetchSignalFromJava(2000, 10, 0.1, state.tr, state.te, false),
+            fetchSignalFromJava(800, 50, 0.5, state.tr, state.te, false)
+        ]);
 
-        document.getElementById('ph-pelvis-cor-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-pelvis-cor-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-pelvis-cor-bone-l')?.setAttribute('fill', colors.bone_cortical);
-        document.getElementById('ph-pelvis-cor-bone-r')?.setAttribute('fill', colors.bone_cortical);
-        document.getElementById('ph-pelvis-cor-bladder')?.setAttribute('fill', colors.bladder);
-        document.getElementById('ph-pelvis-cor-sv')?.setAttribute('fill', colors.sv);
-        document.getElementById('ph-pelvis-cor-prostate-pz')?.setAttribute('fill', colors.prostate_pz);
-        document.getElementById('ph-pelvis-cor-prostate-tz')?.setAttribute('fill', colors.prostate_tz);
-        document.getElementById('ph-pelvis-cor-prostate-capsule')?.setAttribute('fill', colors.prostate_capsule);
+        document.querySelectorAll('[id$="-prostate-pz"]').forEach(el => el.setAttribute('fill', c_pz));
+        document.querySelectorAll('[id$="-prostate-tz"]').forEach(el => el.setAttribute('fill', c_tz));
+        document.querySelectorAll('[id$="-bladder"]').forEach(el => el.setAttribute('fill', c_bladder));
+        document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
+        document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
+        document.querySelectorAll('[id*="-bone"]').forEach(el => el.setAttribute('fill', c_bone));
+        document.querySelectorAll('[id$="-spine"]').forEach(el => el.setAttribute('fill', c_bone));
+        document.querySelectorAll('[id$="-rectum"]').forEach(el => el.setAttribute('fill', c_rectum));
 
-        document.getElementById('ph-pelvis-sag-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-pelvis-sag-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-pelvis-sag-spine')?.setAttribute('fill', colors.bone_cortical);
-        document.getElementById('ph-pelvis-sag-bladder')?.setAttribute('fill', colors.bladder);
-        document.getElementById('ph-pelvis-sag-rectum')?.setAttribute('fill', colors.rectum);
-        document.getElementById('ph-pelvis-sag-prostate-pz')?.setAttribute('fill', colors.prostate_pz);
-        document.getElementById('ph-pelvis-sag-prostate-tz')?.setAttribute('fill', colors.prostate_tz);
-        document.getElementById('ph-pelvis-sag-prostate-capsule')?.setAttribute('fill', colors.prostate_capsule);
-        document.getElementById('ph-pelvis-sag-penis')?.setAttribute('fill', colors.penis);
-        document.getElementById('ph-pelvis-sag-symphysis')?.setAttribute('fill', colors.bone_cortical);
-
-        if(document.getElementById('leg-pelvis-pz')) document.getElementById('leg-pelvis-pz').style.backgroundColor = colors.prostate_pz;
-        if(document.getElementById('leg-pelvis-tz')) document.getElementById('leg-pelvis-tz').style.backgroundColor = colors.prostate_tz;
-        if(document.getElementById('leg-pelvis-bladder')) document.getElementById('leg-pelvis-bladder').style.backgroundColor = colors.bladder;
-        if(document.getElementById('leg-pelvis-muscle')) document.getElementById('leg-pelvis-muscle').style.backgroundColor = colors.muscle;
-        if(document.getElementById('leg-pelvis-bone')) document.getElementById('leg-pelvis-bone').style.backgroundColor = colors.bone_cortical;
-        if(document.getElementById('leg-pelvis-fat')) document.getElementById('leg-pelvis-fat').style.backgroundColor = colors.fat;
+        document.getElementById('leg-pelvis-pz').style.backgroundColor = c_pz;
+        document.getElementById('leg-pelvis-tz').style.backgroundColor = c_tz;
+        document.getElementById('leg-pelvis-bladder').style.backgroundColor = c_bladder;
+        document.getElementById('leg-pelvis-fat').style.backgroundColor = c_fat;
     }
     else if (state.region === 'thorax') {
-        const colors = {
-            lung: getSignalIntensity(1200, 30, 0.2, null, null, false),
-            heart_muscle: getSignalIntensity(900, 50, 0.8, null, null, false),
-            blood: getSignalIntensity(1200, 50, 0.9, null, null, false), // Dark blood effect
-            muscle: getSignalIntensity(900, 50, 0.8, null, null, false),
-            fat: getSignalIntensity(250, 80, 1.0, null, null, true),
-            spine: getSignalIntensity(300, 60, 0.8, null, null, false)
-        };
+        const[c_lung, c_heart, c_blood, c_muscle, c_fat, c_spine] = await Promise.all([
+            fetchSignalFromJava(1200, 30, 0.2, state.tr, state.te, false),
+            fetchSignalFromJava(900, 50, 0.8, state.tr, state.te, false),
+            fetchSignalFromJava(1200, 50, 0.9, state.tr, state.te, false), // Dark blood SE
+            fetchSignalFromJava(900, 50, 0.8, state.tr, state.te, false),
+            fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
+            fetchSignalFromJava(300, 60, 0.8, state.tr, state.te, false)
+        ]);
         
-        document.getElementById('ph-tho-ax-lung-r')?.setAttribute('fill', colors.lung);
-        document.getElementById('ph-tho-ax-lung-l')?.setAttribute('fill', colors.lung);
-        document.getElementById('ph-tho-ax-heart')?.setAttribute('fill', colors.heart_muscle);
-        document.getElementById('ph-tho-ax-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-tho-ax-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-tho-ax-spine')?.setAttribute('fill', colors.spine);
+        document.querySelectorAll('[id*="-lung"]').forEach(el => el.setAttribute('fill', c_lung));
+        document.querySelectorAll('[id$="-heart"]').forEach(el => el.setAttribute('fill', c_heart));
+        document.querySelectorAll('[id$="-aorta"]').forEach(el => el.setAttribute('fill', c_blood));
+        document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
+        document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
+        document.querySelectorAll('[id$="-spine"]').forEach(el => el.setAttribute('fill', c_spine));
+        document.querySelectorAll('[id$="-sternum"]').forEach(el => el.setAttribute('fill', c_spine));
 
-        document.getElementById('ph-tho-sag-lung')?.setAttribute('fill', colors.lung);
-        document.getElementById('ph-tho-sag-heart')?.setAttribute('fill', colors.heart_muscle);
-        document.getElementById('ph-tho-sag-muscle')?.setAttribute('fill', colors.muscle);
-        document.getElementById('ph-tho-sag-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-tho-sag-spine')?.setAttribute('fill', colors.spine);
-        document.getElementById('ph-tho-sag-sternum')?.setAttribute('fill', colors.spine);
-
-        if(document.getElementById('leg-tho-lung')) document.getElementById('leg-tho-lung').style.backgroundColor = colors.lung;
-        if(document.getElementById('leg-tho-heart')) document.getElementById('leg-tho-heart').style.backgroundColor = colors.heart_muscle;
-        if(document.getElementById('leg-tho-muscle')) document.getElementById('leg-tho-muscle').style.backgroundColor = colors.muscle;
-        if(document.getElementById('leg-tho-fat')) document.getElementById('leg-tho-fat').style.backgroundColor = colors.fat;
+        document.getElementById('leg-tho-lung').style.backgroundColor = c_lung;
+        document.getElementById('leg-tho-heart').style.backgroundColor = c_heart;
+        document.getElementById('leg-tho-blood').style.backgroundColor = c_blood;
+        document.getElementById('leg-tho-fat').style.backgroundColor = c_fat;
     }
     else if (state.region === 'head') {
         const isT1 = state.orientation === 'Sagittal';
-        const overrideTR = isT1 ? 500 : null;
-        const overrideTE = isT1 ? 15 : null;
+        const effTR = isT1 ? 500 : state.tr;
+        const effTE = isT1 ? 15 : state.te;
 
-        const colors = {
-            csf: getSignalIntensity(4000, 2000, 1.0, overrideTR, overrideTE, false),
-            gm: getSignalIntensity(1200, 100, 0.85, overrideTR, overrideTE, false),
-            wm: getSignalIntensity(600, 80, 0.75, overrideTR, overrideTE, false),
-            fat: getSignalIntensity(250, 80, 1.0, overrideTR, overrideTE, true),
-            bone: getSignalIntensity(2000, 10, 0.1, overrideTR, overrideTE, false)
-        };
+        const[c_csf, c_gm, c_wm, c_fat, c_bone] = await Promise.all([
+            fetchSignalFromJava(4000, 2000, 1.0, effTR, effTE, false),
+            fetchSignalFromJava(1200, 100, 0.85, effTR, effTE, false),
+            fetchSignalFromJava(600, 80, 0.75, effTR, effTE, false),
+            fetchSignalFromJava(250, 80, 1.0, effTR, effTE, true),
+            fetchSignalFromJava(2000, 10, 0.1, effTR, effTE, false)
+        ]);
 
-        document.getElementById('ph-hd-ax-csf')?.setAttribute('fill', colors.csf);
-        document.getElementById('ph-hd-ax-gm')?.setAttribute('fill', colors.gm);
-        document.getElementById('ph-hd-ax-wm')?.setAttribute('fill', colors.wm);
-        document.getElementById('ph-hd-ax-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-hd-ax-bone')?.setAttribute('fill', colors.bone);
-        document.getElementById('ph-hd-ax-ventricles')?.setAttribute('fill', colors.csf);
-        document.getElementById('ph-hd-ax-nuclei')?.setAttribute('fill', colors.gm);
+        document.querySelectorAll('[id*="-csf"]').forEach(el => el.setAttribute('fill', c_csf));
+        document.querySelectorAll('[id*="-ventricle"]').forEach(el => el.setAttribute('fill', c_csf));
+        document.querySelectorAll('[id*="-gm"]').forEach(el => el.setAttribute('fill', c_gm));
+        document.querySelectorAll('[id*="-wm"]').forEach(el => el.setAttribute('fill', c_wm));
+        document.querySelectorAll('[id*="-cc"]').forEach(el => el.setAttribute('fill', c_wm));
+        document.querySelectorAll('[id*="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
+        document.querySelectorAll('[id*="-bone"]').forEach(el => el.setAttribute('fill', c_bone));
 
-        document.getElementById('ph-hd-sag-csf')?.setAttribute('fill', colors.csf);
-        document.getElementById('ph-hd-sag-gm')?.setAttribute('fill', colors.gm);
-        document.getElementById('ph-hd-sag-wm')?.setAttribute('fill', colors.wm);
-        document.getElementById('ph-hd-sag-fat')?.setAttribute('fill', colors.fat);
-        document.getElementById('ph-hd-sag-bone')?.setAttribute('fill', colors.bone);
-        document.getElementById('ph-hd-sag-cc')?.setAttribute('fill', colors.wm);
-        document.getElementById('ph-hd-sag-ventricle')?.setAttribute('fill', colors.csf);
-        document.getElementById('ph-hd-sag-brainstem')?.setAttribute('fill', colors.wm);
-        document.getElementById('ph-hd-sag-cerebellum')?.setAttribute('fill', colors.gm);
-
-        if(document.getElementById('leg-hd-csf')) document.getElementById('leg-hd-csf').style.backgroundColor = colors.csf;
-        if(document.getElementById('leg-hd-gm')) document.getElementById('leg-hd-gm').style.backgroundColor = colors.gm;
-        if(document.getElementById('leg-hd-wm')) document.getElementById('leg-hd-wm').style.backgroundColor = colors.wm;
-        if(document.getElementById('leg-hd-cc')) document.getElementById('leg-hd-cc').style.backgroundColor = colors.wm;
+        document.getElementById('leg-hd-csf').style.backgroundColor = c_csf;
+        document.getElementById('leg-hd-gm').style.backgroundColor = c_gm;
+        document.getElementById('leg-hd-wm').style.backgroundColor = c_wm;
+        document.getElementById('leg-hd-bone').style.backgroundColor = c_bone;
     }
 
-    const baseNoise = Math.max(0, (1.0 - snrFinal) * 0.3);
-    const gFactor = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
+    // Gestione Rumore
+    let baseNoise = Math.max(0, (1.0 - snrFinal) * 0.3);
+    let gFactor = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
     
     document.getElementById('ph-noise').setAttribute('opacity', baseNoise);
     document.getElementById('ph-noise-gfactor').setAttribute('opacity', gFactor);
 
+    // Compressed Sensing
     let filterStr = 'grayscale(100%) ';
     if (state.accelType === 'CS') filterStr += `blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
     document.getElementById('phantom-container').style.filter = filterStr;
 
+    // Shift Chimico
     const shiftPx = bwHzPx < 100 ? 3 : (bwHzPx <= 250 ? 1 : 0);
     document.querySelectorAll('.transform-water').forEach(el => {
         el.style.transform = `translateX(${shiftPx}px)`;

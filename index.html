@@ -21,86 +21,58 @@
 </head>
 <body class="h-screen bg-slate-900 text-slate-300 font-sans flex flex-col overflow-hidden text-sm">
 
-    <!-- SCHERMATA DI LOGIN -->
+    <!-- SCHERMATA LOGIN -->
     <div id="login-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center transition-opacity duration-500">
         <div class="bg-slate-900 border border-slate-700 p-8 rounded-lg shadow-2xl flex flex-col items-center gap-4 w-80">
             <div class="w-12 h-12 bg-blue-600 text-white font-bold flex items-center justify-center rounded-lg text-2xl mb-2">S</div>
             <h2 class="text-xl font-bold text-slate-100 text-center">SIMULATORE RM</h2>
             <p class="text-xs text-slate-400 text-center mb-4">Inserisci la password di accesso per continuare.</p>
-            <input type="password" id="login-pwd" class="w-full bg-slate-950 border border-slate-600 rounded p-2 text-center text-slate-200 focus:border-blue-500 outline-none" placeholder="Password" onkeydown="if(event.key === 'Enter') checkPassword()">
-            <button onclick="checkPassword()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors uppercase tracking-wider text-xs mt-2">Accedi</button>
-            <p id="login-err" class="text-red-400 text-xs hidden mt-2">⚠️ Password errata!</p>
+            <input type="password" id="login-pwd" class="w-full bg-slate-950 border border-slate-600 rounded p-2 text-center text-slate-200 focus:border-blue-500 outline-none" placeholder="Password">
+            <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors uppercase tracking-wider text-xs mt-2">Accedi</button>
+            <p id="login-err" class="text-red-400 text-xs hidden mt-2">Password errata!</p>
         </div>
     </div>
 
-    <!-- HEADER & SEARCH ENGINE -->
+    <!-- HEADER & SEARCH -->
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center shrink-0 relative z-40">
         <div class="flex items-center gap-4">
             <div class="w-7 h-7 bg-blue-600 text-white font-bold flex items-center justify-center rounded-sm">S</div>
             <div>
                 <h1 class="text-base font-bold text-slate-100 tracking-wide">SIMULATORE DI SEQUENZE RM</h1>
-                <p class="text-xs text-slate-500">Vida 3T Advanced Physics Engine</p>
+                <p class="text-xs text-slate-500">Simulatore di Sequenze di Risonanza Magnetica</p>
             </div>
         </div>
-        
         <div class="flex items-center gap-4">
             <div id="alert-banner" class="hidden bg-red-900/50 border border-red-500 text-red-200 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">
                 Sotto-Soglia Diagnostica
             </div>
             <div class="relative">
-                <input type="text" id="quick-search" placeholder="Search Parameter..." class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500 w-56 placeholder-slate-500" oninput="searchParameters(this.value)">
+                <input type="text" id="quick-search" placeholder="Search Parameter..." class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded px-3 py-1.5 outline-none focus:border-blue-500 w-56 placeholder-slate-500">
                 <div id="search-results" class="absolute top-full right-0 mt-1 w-64 max-h-64 overflow-y-auto bg-slate-900 border border-slate-700 rounded shadow-2xl hidden flex-col z-50"></div>
             </div>
         </div>
     </header>
 
     <div class="flex flex-1 overflow-hidden relative z-0">
-        
         <!-- SIDEBAR TABS -->
-        <aside class="w-48 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto">
-            <button onclick="switchTab('routine')" class="tab-btn active p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="routine">Routine</button>
-            <button onclick="switchTab('contrast')" class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="contrast">Contrast</button>
-            <button onclick="switchTab('resolution')" class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="resolution">Resolution</button>
-            <button onclick="switchTab('geometry')" class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="geometry">Geometry</button>
-            <button onclick="switchTab('system')" class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="system">System</button>
-            <button onclick="switchTab('physio')" class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="physio">Physio</button>
-            <button onclick="switchTab('sequence')" class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="sequence">Sequence</button>
+        <aside class="w-48 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto" id="sidebar-tabs">
+            <button class="tab-btn active p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="routine">Routine</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="contrast">Contrast</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="resolution">Resolution</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="geometry">Geometry</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="system">System</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="physio">Physio</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="sequence">Sequence</button>
+            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-blue-400 hover:bg-slate-800 transition-colors mt-auto border-t border-slate-800" data-target="setup">Setup</button>
         </aside>
 
-        <!-- MAIN CONTENT AREA -->
+        <!-- MAIN PANEL -->
         <main class="flex-1 overflow-y-auto p-4 flex flex-col xl:flex-row gap-4 bg-slate-900">
-            
-            <div class="flex-1 bg-slate-800 border border-slate-700 rounded-md p-4" id="parameters-container">
-                <!-- Generato da JS -->
-            </div>
+            <div class="flex-1 bg-slate-800 border border-slate-700 rounded-md p-4" id="parameters-container"></div>
 
-            <!-- RIGHT PANEL (Phantom + Patient) -->
+            <!-- PHANTOM VIEWER -->
             <div class="w-full xl:w-80 flex flex-col gap-4 shrink-0">
-                
-                <div class="bg-slate-800 border border-slate-700 rounded-md p-4">
-                    <h3 class="text-xs font-bold uppercase text-slate-400 mb-3 border-b border-slate-700 pb-1">Setup Paziente & Regione</h3>
-                    <div class="mb-3">
-                        <label class="block text-xs text-slate-500 mb-1">Distretto Anatomico</label>
-                        <select id="phantom-region" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1.5 text-slate-200 outline-none focus:border-blue-500 text-xs" onchange="changeRegion(this.value)">
-                            <option value="abdomen">Addome Superiore</option>
-                            <option value="pelvis">Pelvi / Prostata</option>
-                            <option value="thorax">Torace</option>
-                            <option value="head">Encefalo</option>
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-1">Peso (kg)</label>
-                            <input type="number" id="pat-weight" value="75" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-200 outline-none focus:border-blue-500" oninput="calculatePhysics()">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-slate-500 mb-1">Altezza (cm)</label>
-                            <input type="number" id="pat-height" value="175" class="w-full bg-slate-900 border border-slate-600 rounded px-2 py-1 text-slate-200 outline-none focus:border-blue-500" oninput="calculatePhysics()">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-black border border-slate-700 rounded-md p-4 flex flex-col items-center justify-center relative flex-1 min-h-[300px]">
+                <div class="bg-black border border-slate-700 rounded-md p-4 flex flex-col items-center justify-center relative flex-1 min-h-[400px]">
                     <span id="phantom-title" class="absolute top-2 left-2 text-[10px] text-slate-500 uppercase tracking-widest z-10 bg-black/50 px-1 rounded">Axial Abdomen</span>
                     
                     <div id="phantom-container" class="relative w-full aspect-square border border-slate-800 bg-black transition-all duration-300 overflow-hidden">
@@ -118,75 +90,61 @@
                                 <filter id="texture-parenchyma"><feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="2" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.2 0" in2="SourceGraphic" operator="in"/></filter>
                             </defs>
 
-                            <!-- =================== 1. ADDOME =================== -->
+                            <!-- 1. ADDOME -->
                             <g id="ph-group-abdomen" class="hidden">
                                 <path id="ph-abd-fat" d="M 10 100 C 10 30, 190 30, 190 100 C 190 160, 150 180, 100 180 C 50 180, 10 160, 10 100 Z" class="transition-colors duration-300"/>
                                 <path id="ph-abd-muscle" d="M 20 100 C 20 40, 180 40, 180 100 C 180 150, 140 170, 100 170 C 60 170, 20 150, 20 100 Z" class="transition-colors duration-300 transform-water"/>
-                                <!-- Fegato -->
                                 <path id="ph-abd-liver" d="M 22 95 C 22 55, 85 45, 105 50 C 120 54, 125 65, 115 80 C 110 90, 85 130, 45 135 C 25 138, 22 115, 22 95 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-                                <!-- Milza -->
                                 <path id="ph-abd-spleen" d="M 175 90 C 178 70, 160 55, 145 60 C 135 65, 138 80, 145 95 C 150 105, 165 115, 175 90 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                                 <g class="transform-water">
-                                    <!-- Rene Dx -->
                                     <path id="ph-abd-kidney-r-cortex" d="M 40 140 C 35 125, 45 115, 55 115 C 65 115, 70 130, 60 145 C 50 155, 45 155, 40 140 Z" class="transition-colors duration-300"/>
                                     <path id="ph-abd-kidney-r-medulla" d="M 45 135 C 43 125, 48 120, 52 120 C 58 120, 60 130, 55 140 C 50 145, 48 145, 45 135 Z" class="transition-colors duration-300"/>
-                                    <!-- Rene Sx -->
                                     <path id="ph-abd-kidney-l-cortex" d="M 160 140 C 165 125, 155 115, 145 115 C 135 115, 130 130, 140 145 C 150 155, 155 155, 160 140 Z" class="transition-colors duration-300"/>
                                     <path id="ph-abd-kidney-l-medulla" d="M 155 135 C 157 125, 152 120, 148 120 C 142 120, 140 130, 145 140 C 150 145, 152 145, 155 135 Z" class="transition-colors duration-300"/>
                                 </g>
                                 <path id="ph-abd-spine" d="M 90 145 C 90 135, 110 135, 110 145 C 110 160, 90 160, 90 145 Z" class="transition-colors duration-300 transform-water texture-spongy"/>
                             </g>
 
-                            <!-- =================== 2. PELVI =================== -->
+                            <!-- 2. PELVI -->
                             <g id="ph-group-pelvis" class="hidden">
                                 <path id="ph-pelvis-fat" d="M 15 90 C 15 30, 185 30, 185 90 C 185 170, 150 190, 100 190 C 50 190, 15 170, 15 90 Z" class="transition-colors duration-300"/>
                                 <path id="ph-pelvis-muscle" d="M 25 90 C 25 40, 175 40, 175 90 C 175 150, 140 180, 100 180 C 60 180, 25 150, 25 90 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-                                <!-- Ossa Coxali e Teste Femorali -->
                                 <path id="ph-pelvis-bone-l" d="M 25 90 C 25 60, 50 50, 55 60 C 45 80, 40 120, 60 140 C 45 150, 25 130, 25 90" class="transition-colors duration-300" />
                                 <path id="ph-pelvis-bone-r" d="M 175 90 C 175 60, 150 50, 145 60 C 155 80, 160 120, 140 140 C 155 150, 175 130, 175 90" class="transition-colors duration-300" />
                                 <circle id="ph-pelvis-femur-l" cx="40" cy="110" r="16" class="transition-colors duration-300 transform-water texture-spongy"/>
                                 <circle id="ph-pelvis-femur-r" cx="160" cy="110" r="16" class="transition-colors duration-300 transform-water texture-spongy"/>
-                                <!-- Vescica -->
                                 <path id="ph-pelvis-bladder" d="M 65 60 C 65 35, 135 35, 135 60 C 140 85, 120 100, 100 100 C 80 100, 60 85, 65 60 Z" class="transition-colors duration-300 transform-water"/>
-                                <!-- Prostata -->
                                 <path id="ph-pelvis-prostate-pz" d="M 78 115 C 78 100, 122 100, 122 115 C 126 135, 112 140, 100 140 C 88 140, 74 135, 78 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
                                 <path id="ph-pelvis-prostate-tz" d="M 88 115 C 88 105, 112 105, 112 115 C 114 125, 106 130, 100 130 C 94 130, 86 125, 88 115 Z" class="transition-colors duration-300 transform-water texture-parenchyma"/>
-                                <circle cx="100" cy="115" r="2" fill="#000" class="transform-water"/> <!-- Uretra -->
-                                <!-- Retto -->
+                                <circle cx="100" cy="115" r="2" fill="#000" class="transform-water"/> 
                                 <path id="ph-pelvis-rectum" d="M 85 150 C 85 135, 115 135, 115 150 C 115 170, 85 170, 85 150 Z" class="transition-colors duration-300 transform-water"/>
                             </g>
 
-                            <!-- =================== 3. TORACE =================== -->
+                            <!-- 3. TORACE -->
                             <g id="ph-group-thorax" class="hidden">
                                 <path id="ph-thorax-fat" d="M 10 100 C 10 30, 190 30, 190 100 C 190 160, 150 180, 100 180 C 50 180, 10 160, 10 100 Z" class="transition-colors duration-300"/>
                                 <path id="ph-thorax-muscle" d="M 20 100 C 20 40, 180 40, 180 100 C 180 150, 140 170, 100 170 C 60 170, 20 150, 20 100 Z" class="transition-colors duration-300 transform-water"/>
-                                <!-- Polmoni -->
                                 <path id="ph-thorax-lung-r" d="M 25 100 C 25 50, 50 40, 85 45 C 85 85, 75 135, 85 155 C 50 150, 25 135, 25 100 Z" class="transition-colors duration-300 transform-water texture-lung"/>
                                 <path id="ph-thorax-lung-l" d="M 175 100 C 175 50, 150 40, 115 45 C 115 85, 125 135, 115 155 C 150 150, 175 135, 175 100 Z" class="transition-colors duration-300 transform-water texture-lung"/>
-                                <!-- Cuore (Camere distinte) -->
                                 <path id="ph-thorax-heart-lv" d="M 100 85 C 100 70, 125 75, 130 95 C 135 115, 110 120, 100 105 Z" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-thorax-heart-rv" d="M 100 85 C 100 70, 80 65, 75 85 C 70 105, 90 110, 100 105 Z" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-thorax-heart-la" d="M 115 115 C 115 105, 135 105, 135 115 C 135 125, 115 125, 115 115 Z" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-thorax-heart-ra" d="M 85 110 C 85 100, 65 100, 65 110 C 65 120, 85 120, 85 110 Z" class="transition-colors duration-300 transform-water"/>
-                                <!-- Vasi -->
                                 <circle id="ph-thorax-aorta" cx="102" cy="130" r="8" class="transition-colors duration-300 transform-water"/> 
                                 <path id="ph-thorax-spine" d="M 90 150 C 90 140, 110 140, 110 150 C 110 165, 90 165, 90 150 Z" class="transition-colors duration-300 transform-water texture-spongy"/>
                             </g>
 
-                            <!-- =================== 4. CRANIO =================== -->
+                            <!-- 4. CRANIO -->
                             <g id="ph-group-head" class="hidden">
                                 <path id="ph-head-fat" d="M 25 100 C 25 40, 175 40, 175 100 C 175 160, 150 185, 100 185 C 50 185, 25 160, 25 100 Z" class="transition-colors duration-300"/>
                                 <path id="ph-head-bone" d="M 32 100 C 32 45, 168 45, 168 100 C 168 155, 145 178, 100 178 C 55 178, 32 155, 32 100 Z" class="transition-colors duration-300 transform-water"/>
                                 <path id="ph-head-csf-outer" d="M 37 100 C 37 50, 163 50, 163 100 C 163 150, 140 173, 100 173 C 60 173, 37 150, 37 100 Z" class="transition-colors duration-300 transform-water"/>
-                                <!-- Sostanza Grigia (Corteccia convoluta simulata) -->
                                 <path id="ph-head-gm" d="M 40 100 C 40 55, 75 40, 100 40 C 125 40, 160 55, 160 100 C 160 145, 135 168, 100 168 C 65 168, 40 145, 40 100 Z" class="transition-colors duration-300 transform-water texture-brain"/>
-                                <!-- Sostanza Bianca -->
                                 <path id="ph-head-wm" d="M 50 100 C 50 65, 80 50, 100 50 C 120 50, 150 65, 150 100 C 150 135, 125 155, 100 155 C 75 155, 50 135, 50 100 Z" class="transition-colors duration-300 transform-water"/>
-                                <!-- Ventricoli Laterali -->
                                 <path id="ph-head-csf" d="M 85 80 Q 100 60 115 80 Q 120 110 105 125 L 100 115 L 95 125 Q 80 110 85 80 Z" class="transition-colors duration-300 transform-water"/>
                             </g>
                             
-                            <!-- Livelli di Rumore Overlay -->
+                            <!-- LAYER RUMORE -->
                             <rect id="ph-noise" x="0" y="0" width="200" height="200" filter="url(#mri-noise)" opacity="0" style="mix-blend-mode: screen; pointer-events: none; transition: opacity 0.3s;" />
                             <rect id="ph-noise-gfactor" x="0" y="0" width="200" height="200" filter="url(#mri-noise)" mask="url(#gfactor-mask)" opacity="0" style="mix-blend-mode: screen; pointer-events: none; transition: opacity 0.3s;" />
                         </svg>

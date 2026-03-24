@@ -1,9 +1,9 @@
 try {
     window.API_URL = "https://mri-physics-core.onrender.com/calculate";
 
-    // 1. STATO INIZIALE (Sincronizzato con UI Siemens)
+    // 1. STATO GLOBALE 
     window.state = {
-        slabGroup: '1', slabs: '1', slices: 60, position: '0.0', orientation: 'Transversal', phaseEncDir: 'R >> L',
+        slabGroup: '1.0', slabs: '1.0', slices: 60, position: '0.0', orientation: 'Transversal', phaseEncDir: 'R >> L',
         phaseOS: 30.0, sliceOS: 5.0, fovRead: 220.0, fovPhasePct: 100.0, sliceThick: 1.0, tr: 2200.0, te: 105.0, nex: 1.8, conc: 1,
         autoAlign: 'Head > Brain', coilElements: 'BO2,3;SP4,5',
         flipAngle: 135.0, saturation: 'Standard', darkBlood: false, bloodSuppression: 'Off',
@@ -16,7 +16,7 @@ try {
         region: 'abdomen', patWeight: 75, patHeight: 175
     };
 
-    // 2. CONFIGURAZIONE TABS (Struttura Syngo Rigorosa)
+    // 2. CONFIGURAZIONE TABS (Struttura Rigorosa Syngo Console)
     window.config = {
         routine:[
             { section: 'Routine', fields:[
@@ -129,7 +129,7 @@ try {
         ]
     };
 
-    // 3. LOGICHE DI GATEWAY (LOGIN) E RICERCA
+    // 3. LOGIN & SEARCH
     window.checkPassword = function() {
         if (document.getElementById('login-pwd').value === 'simulatore') {
             document.getElementById('login-screen').style.opacity = '0';
@@ -181,6 +181,7 @@ try {
         window.switchTab(tabKey);
 
         if (!fieldId) return; 
+
         setTimeout(() => {
             const el = document.getElementById(`inp-${fieldId}`);
             if (el) {
@@ -192,7 +193,7 @@ try {
         }, 50);
     };
 
-    // 4. LOGICA DI RENDERING UI (NO-FOCUS-LOSS)
+    // 4. LOGICA AUTO-ISO & INTERFACCIA (NO FOCUS BUG)
     window.autoIso = function() {
         const dx = (window.state.fovRead || 220) / (window.state.baseRes || 320);
         window.state.sliceThick = parseFloat(dx.toFixed(2));
@@ -267,7 +268,7 @@ try {
             window.state[key] = value;
         } else if (['dimension', 'orientation', 'saturation', 'accelType', 'region', 'position', 'phaseEncDir', 'autoAlign', 'coilElements', 'dynamicMode', 'multipleSeries', 'reordering', 'refScans', 'seqName', 'bloodSuppression', 'interp'].includes(key)) {
             window.state[key] = value;
-            // Solo alcuni select richiedono rerender per sbloccare/bloccare campi
+            // Solo alcuni select richiedono rerender del tab per bloccare/sbloccare campi
             if(['dimension', 'accelType'].includes(key)) {
                 window.calculatePhysics();
                 const activeTab = document.querySelector('.tab-btn.active');
@@ -280,7 +281,7 @@ try {
             window.state[key] = parseFloat(value) || 0;
         }
         
-        // Mantiene il focus aggiornando puntualmente gli ID
+        // Mantiene il focus puntando per ID e NON distruggendo il DOM
         document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => { 
             if(el.type === 'checkbox') el.checked = value;
             else if(el.value != value) el.value = value; 
@@ -361,7 +362,7 @@ try {
         const activeGroup = document.getElementById(`ph-group-${viewId}`);
         if(activeGroup) {
             activeGroup.classList.remove('hidden');
-            activeGroup.style.display = 'block'; // Forza display
+            activeGroup.style.display = 'block'; 
         }
 
         const activeLegend = document.getElementById(`legend-${legendId}`);
@@ -402,7 +403,7 @@ try {
         let normalized = rawSignal / (referenceSignal * 0.9);
         let s = Math.max(0, Math.min(1.0, normalized));
 
-        // Scala a 5 livelli rigorosa (0=10, 1=60, 2=120, 3=190, 4=245)
+        // Scala a 5 livelli clinici (0=10, 1=60, 2=120, 3=190, 4=245)
         const levels =[10, 60, 120, 190, 245];
         let scaled = s * 4.0;
         let lowerIdx = Math.floor(scaled);
@@ -467,6 +468,7 @@ try {
         let totalLines = 0;
 
         if (is3D) {
+            // FIX: Assicura l'assenza di calcoli di slice in 2D
             const effNz = N_z * (1 + (window.state.sliceOS || 0) / 100) * ((window.state.slicePartial || 100) / 100);
             totalLines = effNy * effNz;
             taSeconds = (totalLines * nex * TR) / (tf * effR * 1000);
@@ -525,7 +527,7 @@ try {
     };
 
     window.renderSVGPhantom = async function(snrFinal, bwHzPx) {
-        // Assegnazioni livelli di Bloch come da indicazione
+        // Assegnazioni T1/T2 secondo la direttiva clinica a 5 livelli
         if (window.state.region === 'abdomen') {
             const[c_liver, c_spleen, c_kidney, c_fluid, c_muscle, c_fat, c_spine] = await Promise.all([
                 window.fetchSignalFromJava(810, 42, 0.85, null, null, false), // T1:3, T2:1
@@ -591,7 +593,7 @@ try {
             ]);
             
             document.querySelectorAll('[id*="-lung"]').forEach(el => el.setAttribute('fill', c_lung));
-            document.querySelectorAll('[id$="-heart"], [id$="-heart-lv"], [id$="-heart-rv"], [id$="-heart-la"], [id$="-heart-ra"]').forEach(el => el.setAttribute('fill', c_heart));
+            document.querySelectorAll('[id$="-heart"], [id$="-heart-lv"],[id$="-heart-rv"], [id$="-heart-la"], [id$="-heart-ra"]').forEach(el => el.setAttribute('fill', c_heart));
             document.querySelectorAll('[id$="-aorta"]').forEach(el => el.setAttribute('fill', c_blood));
             document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
             document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
@@ -652,10 +654,9 @@ try {
         });
     };
 
-    // 5. INIZIALIZZAZIONE SICURA AL CARICAMENTO DEL DOM
-    window.addEventListener('DOMContentLoaded', () => { 
+    // 5. EVENT LISTENERS
+    document.addEventListener('DOMContentLoaded', () => { 
         document.getElementById('login-btn')?.addEventListener('click', window.checkPassword);
-        // Non chiamiamo switchTab() né calculatePhysics() qui per evitare calcoli a vuoto dietro il login
     });
 
 } catch(e) {

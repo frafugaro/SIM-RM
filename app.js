@@ -104,10 +104,10 @@ function autoIso() {
     state.phaseResPct = 100;
     state.sliceResPct = 100;
     state.fovPhasePct = 100;
-    document.querySelectorAll(`[id="inp-sliceThick"]`).forEach(el => el.value = state.sliceThick);
-    document.querySelectorAll(`[id="inp-phaseResPct"]`).forEach(el => el.value = 100);
-    document.querySelectorAll(`[id="inp-sliceResPct"]`).forEach(el => el.value = 100);
-    document.querySelectorAll(`[id="inp-fovPhasePct"]`).forEach(el => el.value = 100);
+    document.querySelectorAll(`[id="inp-sliceThick"]`).forEach(el => { if(el.value != state.sliceThick) el.value = state.sliceThick; });
+    document.querySelectorAll(`[id="inp-phaseResPct"]`).forEach(el => { if(el.value != 100) el.value = 100; });
+    document.querySelectorAll(`[id="inp-sliceResPct"]`).forEach(el => { if(el.value != 100) el.value = 100; });
+    document.querySelectorAll(`[id="inp-fovPhasePct"]`).forEach(el => { if(el.value != 100) el.value = 100; });
     calculatePhysics();
 }
 
@@ -116,36 +116,29 @@ function renderTabContent(tabKey) {
     container.innerHTML = '';
     if(!config[tabKey]) return;
 
-    const is2D = state.dimension === '2D';
-    const isCS = state.accelType === 'CS';
-
     config[tabKey].forEach(sec => {
         let html = `<h3 class="text-xs font-bold text-blue-500 mb-3 uppercase border-b border-slate-700 pb-1">${sec.section}</h3><div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">`;
         sec.fields.forEach(f => {
             let val = state[f.id] !== undefined ? state[f.id] : f.val;
-            let disabled = (is2D &&['sliceOS', 'sliceResPct', 'slicePartial'].includes(f.id)) || 
-                           (isCS && f.id === 'accelR') || 
-                           (is2D && f.id === 'accelType' && val === 'CAIPIRINHA') ? 'disabled' : '';
-            let opacity = disabled ? 'opacity: 0.3;' : '';
-            let display = (f.id === 'csFactor' && !isCS) ? 'display: none;' : '';
-            
             let inp = '';
+            
             if (f.type === 'select') {
-                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs" ${disabled}>
-                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''} ${f.id==='accelType'&&o==='CAIPIRINHA'&&is2D?'disabled':''}>${o}</option>`).join('')}</select>`;
+                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs transition-opacity">
+                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
             } else if (f.type === 'range') {
-                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500" ${disabled}><span id="val-${f.id}" class="text-xs font-mono text-blue-400">${val}x</span></div>`;
+                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500"><span id="val-${f.id}" class="text-xs font-mono text-blue-400">${val}x</span></div>`;
             } else if (f.type === 'button') {
-                inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500">${f.label}</button>`;
+                inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500 outline-none">${f.label}</button>`;
             } else {
-                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs" ${disabled}>`;
+                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs transition-opacity">`;
             }
 
-            html += `<div class="flex flex-col gap-1 transition-opacity justify-end" style="${opacity} ${display}">
+            html += `<div class="flex flex-col gap-1 transition-opacity justify-end">
                 ${f.type !== 'button' ? `<label class="text-[10px] uppercase text-slate-400">${f.label}</label>` : ''}${inp}</div>`;
         });
         container.innerHTML += `<div class="mb-6">${html}</div></div>`;
     });
+    applyUIConstraints();
 }
 
 function switchTab(tabKey) {
@@ -155,20 +148,81 @@ function switchTab(tabKey) {
     renderTabContent(tabKey);
 }
 
+// FIX: UpdateState does not re-render the whole tab to preserve focus
 function updateState(key, value) {
     if (['dimension', 'orientation', 'saturation', 'accelType'].includes(key)) state[key] = value;
     else state[key] = parseFloat(value) || 0;
     
-    document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => el.value = value);
+    document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => {
+        if(el.value !== value) el.value = value;
+    });
     if(document.getElementById(`val-${key}`)) document.getElementById(`val-${key}`).innerText = value + (key==='csFactor'?'x':'');
     
     calculatePhysics();
-    renderTabContent(document.querySelector('.tab-btn.active').dataset.target); 
+    applyUIConstraints(); 
 }
 
 function changeRegion(val) {
     state.region = val;
     calculatePhysics();
+}
+
+function applyUIConstraints() {
+    const is2D = state.dimension === '2D';
+    const isCS = state.accelType === 'CS';
+    
+    const accelSelect = document.getElementById('inp-accelType');
+    if (accelSelect) {
+        for (let i=0; i<accelSelect.options.length; i++) {
+            if (accelSelect.options[i].value === 'CAIPIRINHA') {
+                accelSelect.options[i].disabled = is2D;
+                if (is2D && state.accelType === 'CAIPIRINHA') {
+                    updateState('accelType', 'GRAPPA');
+                }
+            }
+        }
+    }
+
+    const zFields =['sliceOS', 'sliceResPct', 'slicePartial'];
+    zFields.forEach(f => {
+        document.querySelectorAll(`[id="inp-${f}"]`).forEach(el => {
+            el.disabled = is2D;
+            const flexParent = el.closest('.flex-col');
+            if(flexParent) flexParent.style.opacity = is2D ? '0.3' : '1';
+        });
+    });
+
+    const csSlider = document.getElementById('inp-csFactor');
+    if(csSlider) {
+        const flexParent = csSlider.closest('.flex-col');
+        if(flexParent) flexParent.style.display = isCS ? 'flex' : 'none';
+    }
+    
+    document.querySelectorAll(`[id="inp-accelR"]`).forEach(el => {
+        el.disabled = isCS;
+        const flexParent = el.closest('.flex-col');
+        if(flexParent) flexParent.style.opacity = isCS ? '0.3' : '1';
+    });
+}
+
+function updatePhantomVisibility() {
+    document.querySelectorAll('g[id^="ph-group-"]').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('div[id^="legend-"]').forEach(el => el.classList.add('hidden'));
+
+    let viewId = state.region;
+    const activeGroup = document.getElementById(`ph-group-${viewId}`);
+    if(activeGroup) activeGroup.classList.remove('hidden');
+
+    const activeLegend = document.getElementById(`legend-${viewId}`);
+    if(activeLegend) activeLegend.classList.remove('hidden');
+
+    const titles = { 
+        'abdomen': 'Axial Abdomen', 
+        'pelvis': 'Axial Pelvis / Prostate',
+        'thorax': 'Axial Thorax', 
+        'head': 'Axial Brain'
+    };
+    document.getElementById('phantom-title').innerText = titles[viewId] || 'Phantom';
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -182,26 +236,21 @@ document.getElementById('pat-height').addEventListener('input', calculatePhysics
 // ==========================================
 
 async function fetchSignalFromJava(t1, t2, pd, tr, te, isFat) {
-    // SATURATION LOGIC UI -> Engine (Forza spegnimento segnale)
     if (state.saturation === 'Fat Sat' && isFat) return `rgb(10, 10, 10)`;
     if (state.saturation === 'Water Sat' && !isFat) return `rgb(10, 10, 10)`;
 
     try {
-        // Chiamata REST all'API ospitata su Render
         const url = `${API_URL}?pd=${pd}&t1=${t1}&t2=${t2}&tr=${tr}&te=${te}`;
         const response = await fetch(url);
         
         if (!response.ok) throw new Error("API call failed");
         const data = await response.json();
         
-        // Estrazione Magnitudine Segnale
         const signal = data.Signal;
-        
-        // Mapping visivo per la UI con moltiplicatore dinamico
         const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
         return `rgb(${gray}, ${gray}, ${gray})`;
     } catch (err) {
-        // Fallback locale equazione di Bloch se il backend Java non risponde
+        // Fallback formula Bloch locale
         const signal = pd * (1 - Math.exp(-tr / t1)) * Math.exp(-te / t2);
         const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
         return `rgb(${gray}, ${gray}, ${gray})`;
@@ -209,6 +258,8 @@ async function fetchSignalFromJava(t1, t2, pd, tr, te, isFat) {
 }
 
 async function calculatePhysics() {
+    updatePhantomVisibility();
+
     const is3D = state.dimension === '3D';
     const isCS = state.accelType === 'CS';
     const effR = isCS ? 1.0 : state.accelR;
@@ -286,50 +337,9 @@ async function calculatePhysics() {
     await renderSVGPhantom(snrFinal, bwHzPx);
 }
 
-// RENDERING ASINCRONO SVG PHANTOM (MULTIPLE FETCHES)
+// RENDERING ASINCRONO SVG PHANTOM
 async function renderSVGPhantom(snrFinal, bwHzPx) {
-    document.querySelectorAll('g[id^="ph-group-"]').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('div[id^="legend-"]').forEach(el => el.classList.add('hidden'));
-
-    let viewId = state.region;
-    let legendId = state.region;
-
-    if (state.region === 'abdomen') {
-        if (state.orientation === 'Transversal') viewId = 'abdomen-axial';
-        else if (state.orientation === 'Coronal') viewId = 'abdomen-coronal';
-        else if (state.orientation === 'Sagittal') viewId = 'abdomen-sagittal';
-    } else if (state.region === 'pelvis') {
-        if (state.orientation === 'Transversal') viewId = 'pelvis-axial';
-        else if (state.orientation === 'Coronal') viewId = 'pelvis-coronal';
-        else if (state.orientation === 'Sagittal') viewId = 'pelvis-sagittal';
-    } else if (state.region === 'thorax') {
-        if (state.orientation === 'Transversal') viewId = 'thorax-axial';
-        else if (state.orientation === 'Sagittal') viewId = 'thorax-sagittal';
-        else viewId = 'thorax-axial'; 
-    } else if (state.region === 'head') {
-        if (state.orientation === 'Transversal') viewId = 'head-axial';
-        else if (state.orientation === 'Sagittal') viewId = 'head-sagittal';
-        else viewId = 'head-axial'; 
-    }
-
-    document.getElementById(`ph-group-${viewId}`).classList.remove('hidden');
-    document.getElementById(`legend-${legendId}`).classList.remove('hidden');
-
-    const titles = { 
-        'abdomen-axial': 'Axial Abdomen', 
-        'abdomen-coronal': 'Coronal Abdomen', 
-        'abdomen-sagittal': 'Sagittal Abdomen', 
-        'pelvis-axial': 'Axial Pelvis/Prostate',
-        'pelvis-coronal': 'Coronal Pelvis',
-        'pelvis-sagittal': 'Sagittal Pelvis',
-        'thorax-axial': 'Axial Thorax', 
-        'thorax-sagittal': 'Sagittal Thorax',
-        'head-axial': 'Axial Brain',
-        'head-sagittal': 'Sagittal Brain'
-    };
-    document.getElementById('phantom-title').innerText = titles[viewId] || titles[state.region];
-
-    // --- CALCOLO COLORI (FETCH PARALLELI) ---
+    
     if (state.region === 'abdomen') {
         const[c_liver, c_spleen, c_kidney_c, c_kidney_m, c_muscle, c_fat, c_spine] = await Promise.all([
             fetchSignalFromJava(810, 42, 0.85, state.tr, state.te, false),
@@ -340,120 +350,123 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
             fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
             fetchSignalFromJava(300, 60, 0.80, state.tr, state.te, false)
         ]);
-        
-        document.querySelectorAll('[id$="-liver"]').forEach(el => el.setAttribute('fill', c_liver));
-        document.querySelectorAll('[id$="-spleen"]').forEach(el => el.setAttribute('fill', c_spleen));
-        document.querySelectorAll('[id$="-kidney-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
-        document.querySelectorAll('[id$="-kidney-r-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
-        document.querySelectorAll('[id$="-kidney-l-cortex"]').forEach(el => el.setAttribute('fill', c_kidney_c));
-        document.querySelectorAll('[id$="-kidney-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
-        document.querySelectorAll('[id$="-kidney-r-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
-        document.querySelectorAll('[id$="-kidney-l-medulla"]').forEach(el => el.setAttribute('fill', c_kidney_m));
-        document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
-        document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
-        document.querySelectorAll('[id$="-spine"]').forEach(el => el.setAttribute('fill', c_spine));
 
-        document.getElementById('leg-abd-liver').style.backgroundColor = c_liver;
-        document.getElementById('leg-abd-spleen').style.backgroundColor = c_spleen;
-        document.getElementById('leg-abd-kidney').style.backgroundColor = c_kidney_c;
-        document.getElementById('leg-abd-fat').style.backgroundColor = c_fat;
+        document.getElementById('ph-abd-liver')?.setAttribute('fill', c_liver);
+        document.getElementById('ph-abd-spleen')?.setAttribute('fill', c_spleen);
+        document.getElementById('ph-abd-kidney-r-cortex')?.setAttribute('fill', c_kidney_c);
+        document.getElementById('ph-abd-kidney-r-medulla')?.setAttribute('fill', c_kidney_m);
+        document.getElementById('ph-abd-kidney-l-cortex')?.setAttribute('fill', c_kidney_c);
+        document.getElementById('ph-abd-kidney-l-medulla')?.setAttribute('fill', c_kidney_m);
+        document.getElementById('ph-abd-muscle')?.setAttribute('fill', c_muscle);
+        document.getElementById('ph-abd-fat')?.setAttribute('fill', c_fat);
+        document.getElementById('ph-abd-spine')?.setAttribute('fill', c_spine);
+
+        if(document.getElementById('leg-abd-liver')) document.getElementById('leg-abd-liver').style.backgroundColor = c_liver;
+        if(document.getElementById('leg-abd-spleen')) document.getElementById('leg-abd-spleen').style.backgroundColor = c_spleen;
+        if(document.getElementById('leg-abd-kidney')) document.getElementById('leg-abd-kidney').style.backgroundColor = c_kidney_c;
+        if(document.getElementById('leg-abd-fat')) document.getElementById('leg-abd-fat').style.backgroundColor = c_fat;
     } 
     else if (state.region === 'pelvis') {
         let t1pz = 1200, t2pz = 130, pdPz = 0.9;
         let t1tz = 1000, t2tz = 80, pdTz = 0.8;
         
-        // Dinamica Edema Prostatico T2
         if (state.te >= 100) {
             const edemaFactor = Math.min(2.0, 1.0 + ((state.te - 100) / 100)); 
             t2pz = 180; pdPz = 0.9 * edemaFactor;
             t2tz = 100; pdTz = 0.8 * edemaFactor;
         }
 
-        const[c_pz, c_tz, c_bladder, c_muscle, c_fat, c_bone, c_rectum] = await Promise.all([
+        const[c_pz, c_tz, c_bladder, c_muscle, c_fat, c_bone_c, c_bone_m, c_rectum] = await Promise.all([
             fetchSignalFromJava(t1pz, t2pz, pdPz, state.tr, state.te, false),
             fetchSignalFromJava(t1tz, t2tz, pdTz, state.tr, state.te, false),
             fetchSignalFromJava(3000, 1000, 1.0, state.tr, state.te, false),
             fetchSignalFromJava(900, 50, 0.8, state.tr, state.te, false),
             fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
             fetchSignalFromJava(2000, 10, 0.1, state.tr, state.te, false),
+            fetchSignalFromJava(350, 60, 1.0, state.tr, state.te, true),
             fetchSignalFromJava(800, 50, 0.5, state.tr, state.te, false)
         ]);
 
-        document.querySelectorAll('[id$="-prostate-pz"]').forEach(el => el.setAttribute('fill', c_pz));
-        document.querySelectorAll('[id$="-prostate-tz"]').forEach(el => el.setAttribute('fill', c_tz));
-        document.querySelectorAll('[id$="-bladder"]').forEach(el => el.setAttribute('fill', c_bladder));
-        document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
-        document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
-        document.querySelectorAll('[id*="-bone"]').forEach(el => el.setAttribute('fill', c_bone));
-        document.querySelectorAll('[id$="-spine"]').forEach(el => el.setAttribute('fill', c_bone));
-        document.querySelectorAll('[id$="-rectum"]').forEach(el => el.setAttribute('fill', c_rectum));
+        document.getElementById('ph-pelvis-pz')?.setAttribute('fill', c_pz);
+        document.getElementById('ph-pelvis-tz')?.setAttribute('fill', c_tz);
+        document.getElementById('ph-pelvis-bladder')?.setAttribute('fill', c_bladder);
+        document.getElementById('ph-pelvis-muscle')?.setAttribute('fill', c_muscle);
+        document.getElementById('ph-pelvis-fat')?.setAttribute('fill', c_fat);
+        document.getElementById('ph-pelvis-bone-l')?.setAttribute('fill', c_bone_c);
+        document.getElementById('ph-pelvis-bone-r')?.setAttribute('fill', c_bone_c);
+        document.getElementById('ph-pelvis-femur-l')?.setAttribute('fill', c_bone_m);
+        document.getElementById('ph-pelvis-femur-r')?.setAttribute('fill', c_bone_m);
+        document.getElementById('ph-pelvis-rectum')?.setAttribute('fill', c_rectum);
 
-        document.getElementById('leg-pelvis-pz').style.backgroundColor = c_pz;
-        document.getElementById('leg-pelvis-tz').style.backgroundColor = c_tz;
-        document.getElementById('leg-pelvis-bladder').style.backgroundColor = c_bladder;
-        document.getElementById('leg-pelvis-fat').style.backgroundColor = c_fat;
+        if(document.getElementById('leg-pelvis-pz')) document.getElementById('leg-pelvis-pz').style.backgroundColor = c_pz;
+        if(document.getElementById('leg-pelvis-tz')) document.getElementById('leg-pelvis-tz').style.backgroundColor = c_tz;
+        if(document.getElementById('leg-pelvis-bladder')) document.getElementById('leg-pelvis-bladder').style.backgroundColor = c_bladder;
+        if(document.getElementById('leg-pelvis-fat')) document.getElementById('leg-pelvis-fat').style.backgroundColor = c_fat;
     }
     else if (state.region === 'thorax') {
         const[c_lung, c_heart, c_blood, c_muscle, c_fat, c_spine] = await Promise.all([
             fetchSignalFromJava(1200, 30, 0.2, state.tr, state.te, false),
             fetchSignalFromJava(900, 50, 0.8, state.tr, state.te, false),
-            fetchSignalFromJava(1200, 50, 0.9, state.tr, state.te, false), // Dark blood SE
+            fetchSignalFromJava(1200, 50, 0.9, state.tr, state.te, false), 
             fetchSignalFromJava(900, 50, 0.8, state.tr, state.te, false),
             fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
             fetchSignalFromJava(300, 60, 0.8, state.tr, state.te, false)
         ]);
         
-        document.querySelectorAll('[id*="-lung"]').forEach(el => el.setAttribute('fill', c_lung));
-        document.querySelectorAll('[id$="-heart"]').forEach(el => el.setAttribute('fill', c_heart));
-        document.querySelectorAll('[id$="-aorta"]').forEach(el => el.setAttribute('fill', c_blood));
-        document.querySelectorAll('[id$="-muscle"]').forEach(el => el.setAttribute('fill', c_muscle));
-        document.querySelectorAll('[id$="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
-        document.querySelectorAll('[id$="-spine"]').forEach(el => el.setAttribute('fill', c_spine));
-        document.querySelectorAll('[id$="-sternum"]').forEach(el => el.setAttribute('fill', c_spine));
+        document.getElementById('ph-thorax-lung-l')?.setAttribute('fill', c_lung);
+        document.getElementById('ph-thorax-lung-r')?.setAttribute('fill', c_lung);
+        document.getElementById('ph-thorax-heart-lv')?.setAttribute('fill', c_heart);
+        document.getElementById('ph-thorax-heart-rv')?.setAttribute('fill', c_heart);
+        document.getElementById('ph-thorax-heart-la')?.setAttribute('fill', c_heart);
+        document.getElementById('ph-thorax-heart-ra')?.setAttribute('fill', c_heart);
+        document.getElementById('ph-thorax-aorta')?.setAttribute('fill', c_blood);
+        document.getElementById('ph-thorax-muscle')?.setAttribute('fill', c_muscle);
+        document.getElementById('ph-thorax-fat')?.setAttribute('fill', c_fat);
+        document.getElementById('ph-thorax-spine')?.setAttribute('fill', c_spine);
 
-        document.getElementById('leg-tho-lung').style.backgroundColor = c_lung;
-        document.getElementById('leg-tho-heart').style.backgroundColor = c_heart;
-        document.getElementById('leg-tho-blood').style.backgroundColor = c_blood;
-        document.getElementById('leg-tho-fat').style.backgroundColor = c_fat;
+        if(document.getElementById('leg-tho-lung')) document.getElementById('leg-tho-lung').style.backgroundColor = c_lung;
+        if(document.getElementById('leg-tho-heart')) document.getElementById('leg-tho-heart').style.backgroundColor = c_heart;
+        if(document.getElementById('leg-tho-blood')) document.getElementById('leg-tho-blood').style.backgroundColor = c_blood;
+        if(document.getElementById('leg-tho-fat')) document.getElementById('leg-tho-fat').style.backgroundColor = c_fat;
     }
     else if (state.region === 'head') {
-        const isT1 = state.orientation === 'Sagittal';
-        const effTR = isT1 ? 500 : state.tr;
-        const effTE = isT1 ? 15 : state.te;
-
         const[c_csf, c_gm, c_wm, c_fat, c_bone] = await Promise.all([
-            fetchSignalFromJava(4000, 2000, 1.0, effTR, effTE, false),
-            fetchSignalFromJava(1200, 100, 0.85, effTR, effTE, false),
-            fetchSignalFromJava(600, 80, 0.75, effTR, effTE, false),
-            fetchSignalFromJava(250, 80, 1.0, effTR, effTE, true),
-            fetchSignalFromJava(2000, 10, 0.1, effTR, effTE, false)
+            fetchSignalFromJava(4000, 2000, 1.0, state.tr, state.te, false),
+            fetchSignalFromJava(1200, 100, 0.85, state.tr, state.te, false),
+            fetchSignalFromJava(600, 80, 0.75, state.tr, state.te, false),
+            fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
+            fetchSignalFromJava(2000, 10, 0.1, state.tr, state.te, false)
         ]);
 
-        document.querySelectorAll('[id*="-csf"]').forEach(el => el.setAttribute('fill', c_csf));
-        document.querySelectorAll('[id*="-ventricle"]').forEach(el => el.setAttribute('fill', c_csf));
-        document.querySelectorAll('[id*="-gm"]').forEach(el => el.setAttribute('fill', c_gm));
-        document.querySelectorAll('[id*="-wm"]').forEach(el => el.setAttribute('fill', c_wm));
-        document.querySelectorAll('[id*="-cc"]').forEach(el => el.setAttribute('fill', c_wm));
-        document.querySelectorAll('[id*="-fat"]').forEach(el => el.setAttribute('fill', c_fat));
-        document.querySelectorAll('[id*="-bone"]').forEach(el => el.setAttribute('fill', c_bone));
+        document.getElementById('ph-head-csf')?.setAttribute('fill', c_csf);
+        document.getElementById('ph-head-csf-outer')?.setAttribute('fill', c_csf);
+        document.getElementById('ph-head-gm')?.setAttribute('fill', c_gm);
+        document.getElementById('ph-head-wm')?.setAttribute('fill', c_wm);
+        document.getElementById('ph-head-fat')?.setAttribute('fill', c_fat);
+        document.getElementById('ph-head-bone')?.setAttribute('fill', c_bone);
 
-        document.getElementById('leg-hd-csf').style.backgroundColor = c_csf;
-        document.getElementById('leg-hd-gm').style.backgroundColor = c_gm;
-        document.getElementById('leg-hd-wm').style.backgroundColor = c_wm;
-        document.getElementById('leg-hd-bone').style.backgroundColor = c_bone;
+        if(document.getElementById('leg-hd-csf')) document.getElementById('leg-hd-csf').style.backgroundColor = c_csf;
+        if(document.getElementById('leg-hd-gm')) document.getElementById('leg-hd-gm').style.backgroundColor = c_gm;
+        if(document.getElementById('leg-hd-wm')) document.getElementById('leg-hd-wm').style.backgroundColor = c_wm;
+        if(document.getElementById('leg-hd-bone')) document.getElementById('leg-hd-bone').style.backgroundColor = c_bone;
     }
 
     // Gestione Rumore
     let baseNoise = Math.max(0, (1.0 - snrFinal) * 0.3);
-    let gFactor = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
+    let gFactorOpacity = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
     
-    document.getElementById('ph-noise').setAttribute('opacity', baseNoise);
-    document.getElementById('ph-noise-gfactor').setAttribute('opacity', gFactor);
+    // CS Denoising
+    if (state.accelType === 'CS') {
+        const cleanFactor = state.csFactor * 0.05;
+        baseNoise = Math.max(0, baseNoise - cleanFactor);
+        gFactorOpacity = Math.max(0, gFactorOpacity - cleanFactor);
+        document.getElementById('phantom-container').style.filter = `grayscale(100%) blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
+    } else {
+        document.getElementById('phantom-container').style.filter = 'grayscale(100%)';
+    }
 
-    // Compressed Sensing
-    let filterStr = 'grayscale(100%) ';
-    if (state.accelType === 'CS') filterStr += `blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
-    document.getElementById('phantom-container').style.filter = filterStr;
+    document.getElementById('ph-noise').setAttribute('opacity', baseNoise);
+    document.getElementById('ph-noise-gfactor').setAttribute('opacity', gFactorOpacity);
 
     // Shift Chimico
     const shiftPx = bwHzPx < 100 ? 3 : (bwHzPx <= 250 ? 1 : 0);

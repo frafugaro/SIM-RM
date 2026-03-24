@@ -1,9 +1,4 @@
-// ==========================================
-// CONFIGURAZIONE E STATO INIZIALE
-// ==========================================
-
-// URL REST API del backend Java ospitato su Render
-const API_URL = "/calculate"; // Molto più pulito e veloce
+const API_URL = "https://mri-physics-core.onrender.com/calculate";
 
 const state = {
     orientation: 'Transversal',
@@ -61,10 +56,7 @@ const config = {
     ]
 };
 
-// ==========================================
-// UI HANDLERS & NAVIGATION
-// ==========================================
-
+document.getElementById('login-btn').addEventListener('click', checkPassword);
 document.getElementById('login-pwd').addEventListener('keydown', (e) => { if(e.key==='Enter') checkPassword(); });
 function checkPassword() {
     if (document.getElementById('login-pwd').value === 'simulatore') {
@@ -86,17 +78,13 @@ document.getElementById('quick-search').addEventListener('input', function(e) {
             section.fields.forEach(field => {
                 if (field.label.toLowerCase().includes(query)) {
                     const div = document.createElement('div');
-                    div.className = 'px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 cursor-pointer border-b border-slate-800 transition-colors';
+                    div.className = 'px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 cursor-pointer border-b border-slate-800';
                     div.innerText = `${field.label} - Tab: ${tabKey.toUpperCase()}`;
                     div.onclick = () => {
                         switchTab(tabKey);
                         setTimeout(() => {
                             const el = document.getElementById(`inp-${field.id}`);
-                            if(el) { 
-                                el.focus(); 
-                                el.classList.add('ring-2', 'ring-blue-400'); 
-                                setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000); 
-                            }
+                            if(el) { el.focus(); el.classList.add('ring-2', 'ring-blue-400'); setTimeout(()=>el.classList.remove('ring-2'), 2000); }
                         }, 50);
                         resContainer.classList.add('hidden');
                         document.getElementById('quick-search').value = '';
@@ -107,12 +95,8 @@ document.getElementById('quick-search').addEventListener('input', function(e) {
         });
     });
     resContainer.classList.remove('hidden');
-    resContainer.classList.add('flex', 'flex-col');
+    resContainer.classList.add('flex');
 });
-
-// ==========================================
-// RENDERING MOTORE UI
-// ==========================================
 
 function autoIso() {
     const dx = state.fovRead / state.baseRes;
@@ -120,12 +104,10 @@ function autoIso() {
     state.phaseResPct = 100;
     state.sliceResPct = 100;
     state.fovPhasePct = 100;
-    
-    // Sincronizza visivamente gli input
-    ['sliceThick', 'phaseResPct', 'sliceResPct', 'fovPhasePct'].forEach(id => {
-        document.querySelectorAll(`[id="inp-${id}"]`).forEach(el => el.value = state[id]);
-    });
-    
+    document.querySelectorAll(`[id="inp-sliceThick"]`).forEach(el => el.value = state.sliceThick);
+    document.querySelectorAll(`[id="inp-phaseResPct"]`).forEach(el => el.value = 100);
+    document.querySelectorAll(`[id="inp-sliceResPct"]`).forEach(el => el.value = 100);
+    document.querySelectorAll(`[id="inp-fovPhasePct"]`).forEach(el => el.value = 100);
     calculatePhysics();
 }
 
@@ -141,9 +123,7 @@ function renderTabContent(tabKey) {
         let html = `<h3 class="text-xs font-bold text-blue-500 mb-3 uppercase border-b border-slate-700 pb-1">${sec.section}</h3><div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">`;
         sec.fields.forEach(f => {
             let val = state[f.id] !== undefined ? state[f.id] : f.val;
-            
-            // Logica dei vincoli fisici e di accelerazione
-            let disabled = (is2D && ['sliceOS', 'sliceResPct', 'slicePartial'].includes(f.id)) || 
+            let disabled = (is2D &&['sliceOS', 'sliceResPct', 'slicePartial'].includes(f.id)) || 
                            (isCS && f.id === 'accelR') || 
                            (is2D && f.id === 'accelType' && val === 'CAIPIRINHA') ? 'disabled' : '';
             let opacity = disabled ? 'opacity: 0.3;' : '';
@@ -151,21 +131,20 @@ function renderTabContent(tabKey) {
             
             let inp = '';
             if (f.type === 'select') {
-                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs outline-none" ${disabled}>
-                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''} ${f.id === 'accelType' && o === 'CAIPIRINHA' && is2D ? 'disabled' : ''}>${o}</option>`).join('')}
-                </select>`;
+                inp = `<select id="inp-${f.id}" onchange="updateState('${f.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 text-xs" ${disabled}>
+                    ${f.options.map(o => `<option value="${o}" ${val == o ? 'selected' : ''} ${f.id==='accelType'&&o==='CAIPIRINHA'&&is2D?'disabled':''}>${o}</option>`).join('')}</select>`;
             } else if (f.type === 'range') {
-                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500" ${disabled}><span id="val-${f.id}" class="text-xs font-mono text-blue-400 w-8 text-right">${val}x</span></div>`;
+                inp = `<div class="flex items-center gap-2"><input type="range" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" class="w-full accent-blue-500" ${disabled}><span id="val-${f.id}" class="text-xs font-mono text-blue-400">${val}x</span></div>`;
             } else if (f.type === 'button') {
-                inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500 transition-colors">${f.label}</button>`;
+                inp = `<button onclick="${f.action}" class="w-full bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold py-1.5 rounded text-xs border border-blue-500">${f.label}</button>`;
             } else {
-                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs outline-none" ${disabled}>`;
+                inp = `<input type="${f.type}" id="inp-${f.id}" oninput="updateState('${f.id}', this.value)" value="${val}" ${f.step ? `step="${f.step}"` : ''} class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 focus:border-blue-500 font-mono text-xs" ${disabled}>`;
             }
 
-            html += `<div class="flex flex-col gap-1 transition-all justify-end" style="${opacity} ${display}">
-                ${f.type !== 'button' ? `<label class="text-[10px] uppercase text-slate-400 tracking-wider">${f.label}</label>` : ''}${inp}</div>`;
+            html += `<div class="flex flex-col gap-1 transition-opacity justify-end" style="${opacity} ${display}">
+                ${f.type !== 'button' ? `<label class="text-[10px] uppercase text-slate-400">${f.label}</label>` : ''}${inp}</div>`;
         });
-        container.innerHTML += `<div class="mb-6">${html}</div>`;
+        container.innerHTML += `<div class="mb-6">${html}</div></div>`;
     });
 }
 
@@ -181,10 +160,10 @@ function updateState(key, value) {
     else state[key] = parseFloat(value) || 0;
     
     document.querySelectorAll(`[id="inp-${key}"]`).forEach(el => el.value = value);
-    if(document.getElementById(`val-${key}`)) document.getElementById(`val-${key}`).innerText = value + (key==='csFactor' ? 'x' : '');
+    if(document.getElementById(`val-${key}`)) document.getElementById(`val-${key}`).innerText = value + (key==='csFactor'?'x':'');
     
     calculatePhysics();
-    renderTabContent(document.querySelector('.tab-btn.active').dataset.target); // Forza il rerender per applicare i vincoli
+    renderTabContent(document.querySelector('.tab-btn.active').dataset.target); 
 }
 
 function changeRegion(val) {
@@ -198,36 +177,15 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 document.getElementById('pat-weight').addEventListener('input', calculatePhysics);
 document.getElementById('pat-height').addEventListener('input', calculatePhysics);
 
-// ==========================================
-// CORE PHYSICS LOGIC & API FETCH
-// ==========================================
-
-async function fetchSignalFromJava(t1, t2, pd, tr, te, isFat) {
-    // SATURATION LOGIC UI -> Engine (Agisce bypassando il calcolo)
+function getSignalIntensity(t1, t2, pd = 1.0, overrideTR = null, overrideTE = null, isFat = false) {
     if (state.saturation === 'Fat Sat' && isFat) return `rgb(10, 10, 10)`;
     if (state.saturation === 'Water Sat' && !isFat) return `rgb(10, 10, 10)`;
 
-    try {
-        // Chiamata REST all'API ospitata su Render
-        const url = `${API_URL}?pd=${pd}&t1=${t1}&t2=${t2}&tr=${tr}&te=${te}`;
-        const response = await fetch(url);
-        
-        if (!response.ok) throw new Error("API call failed");
-        const data = await response.json();
-        
-        // Estrazione Magnitudine Segnale dal Solutore Bloch
-        const signal = data.Signal;
-        
-        // Mapping visivo per la UI (850 è il moltiplicatore dinamico tarato su Vida 3T)
-        const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
-        return `rgb(${gray}, ${gray}, ${gray})`;
-        
-    } catch (err) {
-        // Fallback matematico locale nel caso in cui Render sia in sospensione
-        const signal = pd * (1 - Math.exp(-tr / t1)) * Math.exp(-te / t2);
-        const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
-        return `rgb(${gray}, ${gray}, ${gray})`;
-    }
+    const effTR = overrideTR !== null ? overrideTR : state.tr;
+    const effTE = overrideTE !== null ? overrideTE : state.te;
+    const signal = pd * (1 - Math.exp(-effTR / t1)) * Math.exp(-effTE / t2);
+    const gray = Math.min(255, Math.max(10, Math.round(signal * 850)));
+    return `rgb(${gray}, ${gray}, ${gray})`;
 }
 
 async function calculatePhysics() {
@@ -235,21 +193,18 @@ async function calculatePhysics() {
     const isCS = state.accelType === 'CS';
     const effR = isCS ? 1.0 : state.accelR;
 
-    // --- Matrice Geometrica ---
     const N_x = state.baseRes;
     const N_y = Math.round(state.baseRes * (state.fovPhasePct / 100) * (state.phaseResPct / 100));
     let N_z = is3D ? Math.round(state.slices * (state.sliceResPct / 100)) : 1;
 
-    // --- Isotropia e Voxel ---
     const dx = state.fovRead / N_x;
     let dy = (state.fovRead * (state.fovPhasePct / 100)) / N_y;
-    if (state.fovPhasePct === 100 && state.phaseResPct === 100) dy = dx; // Forza perfetta quadratura 
+    if (state.fovPhasePct === 100 && state.phaseResPct === 100) dy = dx; 
     let dz = is3D ? (state.slices * state.sliceThick) / N_z : state.sliceThick;
 
     const V_voxel = dx * dy * dz;
     const isIsotropic = (Math.max(dx, dy, dz) - Math.min(dx, dy, dz)) <= 0.01;
 
-    // --- Calcolo del Tempo di Acquisizione (TA) ---
     const effNy = N_y * (1 + state.phaseOS / 100) * (state.phasePartial / 100);
     
     let taSeconds = 0;
@@ -267,38 +222,30 @@ async function calculatePhysics() {
         displayedShots = totalLines / (state.turboFactor * effR);
     }
     
-    // Sconto temporale del Compressed Sensing
     if(isCS) {
         taSeconds = taSeconds / state.csFactor;
         displayedShots = displayedShots / state.csFactor;
     }
 
-    // --- Calcolo SAR ---
     const weight = parseFloat(document.getElementById('pat-weight').value) || 75;
     const height = parseFloat(document.getElementById('pat-height').value) || 175;
     const sar = (0.002 * state.turboFactor * (weight / Math.pow(height/100, 2)) / (state.tr / 1000)) * Math.pow(state.flipAngle / 180, 2);
 
-    // --- Calcolo Rapporto Segnale Rumore (SNR) ---
     const bwHzPx = state.bw / N_y; 
     const acqTerm = is3D ? (state.nex * N_y * N_z) / 14500 : (state.nex * N_y) / 14500;
     
     let snrBase = (V_voxel / 0.64) * Math.sqrt(acqTerm) * Math.sqrt(521 / state.bw) * Math.exp(-state.te / 85) * 3.5; 
-    let snrFinal = snrBase;
     
-    // Moltiplicatori di Shift Chimico
+    let snrFinal = snrBase;
     if (bwHzPx < 100) snrFinal *= 1.15; else if (bwHzPx > 250) snrFinal *= 0.60;
 
-    // Dinamica Accelerazione
     if (isCS) {
-        // Il CS recupera parte dell'SNR perso tramite denoising iterativo
         snrFinal *= Math.sqrt(1.0 / state.csFactor) * (Math.sqrt(state.csFactor) * 0.9);
     } else {
-        // Penalità di Parallel Imaging con G-Factor
         let g_eff = state.accelType === 'CAIPIRINHA' ? Math.max(1.0, state.gFactor - 0.3) : state.gFactor;
         snrFinal *= (1 / (g_eff * Math.sqrt(effR)));
     }
 
-    // --- Dashboard UI Update ---
     document.getElementById('out-ta').innerText = `${Math.floor(taSeconds / 60)}:${Math.round(taSeconds % 60).toString().padStart(2, '0')}`;
     document.getElementById('out-etl').innerText = `${state.turboFactor} / ${Math.ceil(displayedShots)}`;
     document.getElementById('out-res').innerText = `${dx.toFixed(2)} × ${dy.toFixed(2)} × ${dz.toFixed(2)} mm`;
@@ -312,62 +259,228 @@ async function calculatePhysics() {
 
     const isoEl = document.getElementById('out-iso');
     isoEl.innerText = isIsotropic ? 'ISO ✅' : 'ANISO';
-    isoEl.className = `font-bold text-[10px] tracking-widest uppercase ${isIsotropic ? 'text-green-500' : 'text-yellow-600'}`;
+    isoEl.className = `font-bold text-[10px] ${isIsotropic ? 'text-green-500' : 'text-yellow-600'}`;
 
-    // Avvia Rendering SVG
-    await renderSVGPhantom(snrFinal, bwHzPx);
+    updatePhantom(snrFinal, bwHzPx);
 }
 
-async function renderSVGPhantom(snrFinal, bwHzPx) {
+function updatePhantom(snrFinal, bwHzPx) {
     document.querySelectorAll('g[id^="ph-group-"]').forEach(el => el.classList.add('hidden'));
-    document.getElementById('ph-group-abdomen-axial').classList.remove('hidden');
-    document.getElementById('phantom-title').innerText = 'Axial Abdomen';
-    document.getElementById('legend-abdomen').classList.remove('hidden');
+    document.querySelectorAll('div[id^="legend-"]').forEach(el => el.classList.add('hidden'));
 
-    // Chiamate API Backend in Parallelo per il calcolo Bloch
-    // I parametri sono: T1, T2, PD, TR, TE, isFat
-    const [c_liver, c_spleen, c_kidney, c_muscle, c_fat, c_spine] = await Promise.all([
-        fetchSignalFromJava(1200, 160, 0.85, state.tr, state.te, false),
-        fetchSignalFromJava(1000, 120, 0.90, state.tr, state.te, false),
-        fetchSignalFromJava(1100, 130, 0.90, state.tr, state.te, false),
-        fetchSignalFromJava(900, 50, 0.80, state.tr, state.te, false),
-        fetchSignalFromJava(250, 80, 1.0, state.tr, state.te, true),
-        fetchSignalFromJava(300, 60, 0.80, state.tr, state.te, false)
-    ]);
+    let viewId = state.region;
+    let legendId = state.region;
 
-    // Applicazione colori al fantoccio SVG
-    const applyColor = (id, color) => {
-        const el = document.getElementById(id);
-        if(el) el.setAttribute('fill', color);
+    if (state.region === 'abdomen') {
+        if (state.orientation === 'Transversal') viewId = 'abdomen-axial';
+        else if (state.orientation === 'Coronal') viewId = 'abdomen-coronal';
+        else if (state.orientation === 'Sagittal') viewId = 'abdomen-sagittal';
+    } else if (state.region === 'pelvis') {
+        if (state.orientation === 'Transversal') viewId = 'pelvis-axial';
+        else if (state.orientation === 'Coronal') viewId = 'pelvis-coronal';
+        else if (state.orientation === 'Sagittal') viewId = 'pelvis-sagittal';
+    } else if (state.region === 'thorax') {
+        if (state.orientation === 'Transversal') viewId = 'thorax-axial';
+        else if (state.orientation === 'Sagittal') viewId = 'thorax-sagittal';
+        else viewId = 'thorax-axial'; 
+    } else if (state.region === 'head') {
+        if (state.orientation === 'Transversal') viewId = 'head-axial';
+        else if (state.orientation === 'Sagittal') viewId = 'head-sagittal';
+        else viewId = 'head-axial'; 
+    }
+
+    const activeGroup = document.getElementById(`ph-group-${viewId}`);
+    if(activeGroup) activeGroup.classList.remove('hidden');
+
+    const activeLegend = document.getElementById(`legend-${legendId}`);
+    if(activeLegend) activeLegend.classList.remove('hidden');
+
+    const titles = { 
+        'abdomen-axial': 'Axial Abdomen', 
+        'abdomen-coronal': 'Coronal Abdomen', 
+        'abdomen-sagittal': 'Sagittal Abdomen', 
+        'pelvis-axial': 'Axial Pelvis/Prostate',
+        'pelvis-coronal': 'Coronal Pelvis',
+        'pelvis-sagittal': 'Sagittal Pelvis',
+        'thorax-axial': 'Axial Thorax', 
+        'thorax-sagittal': 'Sagittal Thorax',
+        'head-axial': 'Axial Brain',
+        'head-sagittal': 'Sagittal Brain'
     };
+    document.getElementById('phantom-title').innerText = titles[viewId] || titles[state.region];
 
-    applyColor('ph-abd-ax-liver', c_liver);
-    applyColor('ph-abd-ax-spleen', c_spleen);
-    applyColor('ph-abd-ax-kidney-r', c_kidney);
-    applyColor('ph-abd-ax-kidney-l', c_kidney);
-    applyColor('ph-abd-ax-muscle', c_muscle);
-    applyColor('ph-abd-ax-fat', c_fat);
-    applyColor('ph-abd-ax-spine', c_spine);
+    if (state.region === 'abdomen') {
+        const colors = {
+            liver: getSignalIntensity(1200, 160, 0.85, null, null, false), 
+            spleen: getSignalIntensity(1000, 120, 0.90, null, null, false),
+            kidney_cortex: getSignalIntensity(1100, 130, 0.90, null, null, false),
+            kidney_medulla: getSignalIntensity(1100, 130, 0.90, null, null, false), 
+            muscle: getSignalIntensity(900, 50, 0.80, null, null, false),
+            fat: getSignalIntensity(250, 80, 1.0, null, null, true),
+            spine: getSignalIntensity(300, 60, 0.80, null, null, false)
+        };
+        
+        document.getElementById('ph-abd-ax-liver')?.setAttribute('fill', colors.liver);
+        document.getElementById('ph-abd-ax-spleen')?.setAttribute('fill', colors.spleen);
+        document.getElementById('ph-abd-ax-kidney-r-cortex')?.setAttribute('fill', colors.kidney_cortex);
+        document.getElementById('ph-abd-ax-kidney-r-medulla')?.setAttribute('fill', colors.kidney_medulla);
+        document.getElementById('ph-abd-ax-kidney-l-cortex')?.setAttribute('fill', colors.kidney_cortex);
+        document.getElementById('ph-abd-ax-kidney-l-medulla')?.setAttribute('fill', colors.kidney_medulla);
+        document.getElementById('ph-abd-ax-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-abd-ax-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-abd-ax-spine')?.setAttribute('fill', colors.spine);
 
-    // Aggiornamento Legenda
-    document.getElementById('leg-abd-liver').style.backgroundColor = c_liver;
-    document.getElementById('leg-abd-spleen').style.backgroundColor = c_spleen;
-    document.getElementById('leg-abd-kidney').style.backgroundColor = c_kidney;
-    document.getElementById('leg-abd-fat').style.backgroundColor = c_fat;
+        document.getElementById('ph-abd-cor-liver')?.setAttribute('fill', colors.liver);
+        document.getElementById('ph-abd-cor-spleen')?.setAttribute('fill', colors.spleen);
+        document.getElementById('ph-abd-cor-kidney-r-cortex')?.setAttribute('fill', colors.kidney_cortex);
+        document.getElementById('ph-abd-cor-kidney-r-medulla')?.setAttribute('fill', colors.kidney_medulla);
+        document.getElementById('ph-abd-cor-kidney-l-cortex')?.setAttribute('fill', colors.kidney_cortex);
+        document.getElementById('ph-abd-cor-kidney-l-medulla')?.setAttribute('fill', colors.kidney_medulla);
+        document.getElementById('ph-abd-cor-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-abd-cor-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-abd-cor-spine')?.setAttribute('fill', colors.spine);
 
-    // Logica di Rumore e G-Factor Vettoriale
+        document.getElementById('ph-abd-sag-liver')?.setAttribute('fill', colors.liver);
+        document.getElementById('ph-abd-sag-kidney-cortex')?.setAttribute('fill', colors.kidney_cortex);
+        document.getElementById('ph-abd-sag-kidney-medulla')?.setAttribute('fill', colors.kidney_medulla);
+        document.getElementById('ph-abd-sag-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-abd-sag-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-abd-sag-spine')?.setAttribute('fill', colors.spine);
+
+        if(document.getElementById('leg-abd-liver')) document.getElementById('leg-abd-liver').style.backgroundColor = colors.liver;
+        if(document.getElementById('leg-abd-spleen')) document.getElementById('leg-abd-spleen').style.backgroundColor = colors.spleen;
+        if(document.getElementById('leg-abd-kidney')) document.getElementById('leg-abd-kidney').style.backgroundColor = colors.kidney_cortex;
+        if(document.getElementById('leg-abd-fat')) document.getElementById('leg-abd-fat').style.backgroundColor = colors.fat;
+    } 
+    else if (state.region === 'pelvis') {
+        const colors = {
+            prostate_pz: getSignalIntensity(1200, 130, 0.9, null, null, false),
+            prostate_tz: getSignalIntensity(1000, 80, 0.8, null, null, false),
+            prostate_capsule: getSignalIntensity(800, 50, 0.7, null, null, false),
+            bladder: getSignalIntensity(3000, 1000, 1.0, null, null, false),
+            muscle: getSignalIntensity(900, 50, 0.8, null, null, false),
+            fat: getSignalIntensity(250, 80, 1.0, null, null, true),
+            bone_cortical: getSignalIntensity(2000, 10, 0.1, null, null, false),
+            bone_marrow: getSignalIntensity(350, 60, 1.0, null, null, true), 
+            rectum: getSignalIntensity(800, 50, 0.5, null, null, false),
+            sv: getSignalIntensity(1500, 150, 0.9, null, null, false),
+            penis: getSignalIntensity(900, 60, 0.8, null, null, false)
+        };
+
+        document.getElementById('ph-pelvis-ax-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-pelvis-ax-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-pelvis-ax-bone-l')?.setAttribute('fill', colors.bone_cortical);
+        document.getElementById('ph-pelvis-ax-bone-r')?.setAttribute('fill', colors.bone_cortical);
+        document.getElementById('ph-pelvis-ax-rectum')?.setAttribute('fill', colors.rectum);
+        document.getElementById('ph-pelvis-ax-bladder')?.setAttribute('fill', colors.bladder);
+        document.getElementById('ph-pelvis-ax-prostate-pz')?.setAttribute('fill', colors.prostate_pz);
+        document.getElementById('ph-pelvis-ax-prostate-tz')?.setAttribute('fill', colors.prostate_tz);
+        document.getElementById('ph-pelvis-ax-prostate-capsule')?.setAttribute('fill', colors.prostate_capsule);
+
+        document.getElementById('ph-pelvis-cor-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-pelvis-cor-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-pelvis-cor-bone-l')?.setAttribute('fill', colors.bone_cortical);
+        document.getElementById('ph-pelvis-cor-bone-r')?.setAttribute('fill', colors.bone_cortical);
+        document.getElementById('ph-pelvis-cor-bladder')?.setAttribute('fill', colors.bladder);
+        document.getElementById('ph-pelvis-cor-sv')?.setAttribute('fill', colors.sv);
+        document.getElementById('ph-pelvis-cor-prostate-pz')?.setAttribute('fill', colors.prostate_pz);
+        document.getElementById('ph-pelvis-cor-prostate-tz')?.setAttribute('fill', colors.prostate_tz);
+        document.getElementById('ph-pelvis-cor-prostate-capsule')?.setAttribute('fill', colors.prostate_capsule);
+
+        document.getElementById('ph-pelvis-sag-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-pelvis-sag-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-pelvis-sag-spine')?.setAttribute('fill', colors.bone_cortical);
+        document.getElementById('ph-pelvis-sag-bladder')?.setAttribute('fill', colors.bladder);
+        document.getElementById('ph-pelvis-sag-rectum')?.setAttribute('fill', colors.rectum);
+        document.getElementById('ph-pelvis-sag-prostate-pz')?.setAttribute('fill', colors.prostate_pz);
+        document.getElementById('ph-pelvis-sag-prostate-tz')?.setAttribute('fill', colors.prostate_tz);
+        document.getElementById('ph-pelvis-sag-prostate-capsule')?.setAttribute('fill', colors.prostate_capsule);
+        document.getElementById('ph-pelvis-sag-penis')?.setAttribute('fill', colors.penis);
+        document.getElementById('ph-pelvis-sag-symphysis')?.setAttribute('fill', colors.bone_cortical);
+
+        if(document.getElementById('leg-pelvis-pz')) document.getElementById('leg-pelvis-pz').style.backgroundColor = colors.prostate_pz;
+        if(document.getElementById('leg-pelvis-tz')) document.getElementById('leg-pelvis-tz').style.backgroundColor = colors.prostate_tz;
+        if(document.getElementById('leg-pelvis-bladder')) document.getElementById('leg-pelvis-bladder').style.backgroundColor = colors.bladder;
+        if(document.getElementById('leg-pelvis-muscle')) document.getElementById('leg-pelvis-muscle').style.backgroundColor = colors.muscle;
+        if(document.getElementById('leg-pelvis-bone')) document.getElementById('leg-pelvis-bone').style.backgroundColor = colors.bone_cortical;
+        if(document.getElementById('leg-pelvis-fat')) document.getElementById('leg-pelvis-fat').style.backgroundColor = colors.fat;
+    }
+    else if (state.region === 'thorax') {
+        const colors = {
+            lung: getSignalIntensity(1200, 30, 0.2, null, null, false),
+            heart_muscle: getSignalIntensity(900, 50, 0.8, null, null, false),
+            blood: getSignalIntensity(1200, 50, 0.9, null, null, false), // Dark blood effect
+            muscle: getSignalIntensity(900, 50, 0.8, null, null, false),
+            fat: getSignalIntensity(250, 80, 1.0, null, null, true),
+            spine: getSignalIntensity(300, 60, 0.8, null, null, false)
+        };
+        
+        document.getElementById('ph-tho-ax-lung-r')?.setAttribute('fill', colors.lung);
+        document.getElementById('ph-tho-ax-lung-l')?.setAttribute('fill', colors.lung);
+        document.getElementById('ph-tho-ax-heart')?.setAttribute('fill', colors.heart_muscle);
+        document.getElementById('ph-tho-ax-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-tho-ax-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-tho-ax-spine')?.setAttribute('fill', colors.spine);
+
+        document.getElementById('ph-tho-sag-lung')?.setAttribute('fill', colors.lung);
+        document.getElementById('ph-tho-sag-heart')?.setAttribute('fill', colors.heart_muscle);
+        document.getElementById('ph-tho-sag-muscle')?.setAttribute('fill', colors.muscle);
+        document.getElementById('ph-tho-sag-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-tho-sag-spine')?.setAttribute('fill', colors.spine);
+        document.getElementById('ph-tho-sag-sternum')?.setAttribute('fill', colors.spine);
+
+        if(document.getElementById('leg-tho-lung')) document.getElementById('leg-tho-lung').style.backgroundColor = colors.lung;
+        if(document.getElementById('leg-tho-heart')) document.getElementById('leg-tho-heart').style.backgroundColor = colors.heart_muscle;
+        if(document.getElementById('leg-tho-muscle')) document.getElementById('leg-tho-muscle').style.backgroundColor = colors.muscle;
+        if(document.getElementById('leg-tho-fat')) document.getElementById('leg-tho-fat').style.backgroundColor = colors.fat;
+    }
+    else if (state.region === 'head') {
+        const isT1 = state.orientation === 'Sagittal';
+        const overrideTR = isT1 ? 500 : null;
+        const overrideTE = isT1 ? 15 : null;
+
+        const colors = {
+            csf: getSignalIntensity(4000, 2000, 1.0, overrideTR, overrideTE, false),
+            gm: getSignalIntensity(1200, 100, 0.85, overrideTR, overrideTE, false),
+            wm: getSignalIntensity(600, 80, 0.75, overrideTR, overrideTE, false),
+            fat: getSignalIntensity(250, 80, 1.0, overrideTR, overrideTE, true),
+            bone: getSignalIntensity(2000, 10, 0.1, overrideTR, overrideTE, false)
+        };
+
+        document.getElementById('ph-hd-ax-csf')?.setAttribute('fill', colors.csf);
+        document.getElementById('ph-hd-ax-gm')?.setAttribute('fill', colors.gm);
+        document.getElementById('ph-hd-ax-wm')?.setAttribute('fill', colors.wm);
+        document.getElementById('ph-hd-ax-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-hd-ax-bone')?.setAttribute('fill', colors.bone);
+        document.getElementById('ph-hd-ax-ventricles')?.setAttribute('fill', colors.csf);
+        document.getElementById('ph-hd-ax-nuclei')?.setAttribute('fill', colors.gm);
+
+        document.getElementById('ph-hd-sag-csf')?.setAttribute('fill', colors.csf);
+        document.getElementById('ph-hd-sag-gm')?.setAttribute('fill', colors.gm);
+        document.getElementById('ph-hd-sag-wm')?.setAttribute('fill', colors.wm);
+        document.getElementById('ph-hd-sag-fat')?.setAttribute('fill', colors.fat);
+        document.getElementById('ph-hd-sag-bone')?.setAttribute('fill', colors.bone);
+        document.getElementById('ph-hd-sag-cc')?.setAttribute('fill', colors.wm);
+        document.getElementById('ph-hd-sag-ventricle')?.setAttribute('fill', colors.csf);
+        document.getElementById('ph-hd-sag-brainstem')?.setAttribute('fill', colors.wm);
+        document.getElementById('ph-hd-sag-cerebellum')?.setAttribute('fill', colors.gm);
+
+        if(document.getElementById('leg-hd-csf')) document.getElementById('leg-hd-csf').style.backgroundColor = colors.csf;
+        if(document.getElementById('leg-hd-gm')) document.getElementById('leg-hd-gm').style.backgroundColor = colors.gm;
+        if(document.getElementById('leg-hd-wm')) document.getElementById('leg-hd-wm').style.backgroundColor = colors.wm;
+        if(document.getElementById('leg-hd-cc')) document.getElementById('leg-hd-cc').style.backgroundColor = colors.wm;
+    }
+
     const baseNoise = Math.max(0, (1.0 - snrFinal) * 0.3);
     const gFactor = (state.accelType === 'GRAPPA' || state.accelType === 'CAIPIRINHA') && state.accelR > 2.0 ? (state.accelR - 2.0) * 0.15 * state.gFactor : 0;
     
     document.getElementById('ph-noise').setAttribute('opacity', baseNoise);
     document.getElementById('ph-noise-gfactor').setAttribute('opacity', gFactor);
 
-    // Gestione visuale Compressed Sensing (Blur Iterativo vs Dettaglio)
     let filterStr = 'grayscale(100%) ';
     if (state.accelType === 'CS') filterStr += `blur(${(state.csFactor - 1) * 0.3}px) contrast(110%)`;
     document.getElementById('phantom-container').style.filter = filterStr;
 
-    // Artefatto da Shift Chimico
     const shiftPx = bwHzPx < 100 ? 3 : (bwHzPx <= 250 ? 1 : 0);
     document.querySelectorAll('.transform-water').forEach(el => {
         el.style.transform = `translateX(${shiftPx}px)`;
@@ -375,8 +488,4 @@ async function renderSVGPhantom(snrFinal, bwHzPx) {
     });
 }
 
-// Inizializzazione al caricamento
-document.addEventListener('DOMContentLoaded', () => { 
-    switchTab('routine'); 
-    calculatePhysics(); 
-});
+document.addEventListener('DOMContentLoaded', () => { switchTab('routine'); calculatePhysics(); });

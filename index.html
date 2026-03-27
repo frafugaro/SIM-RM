@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulatore di Sequenze RM</title>
+    <title>MRI Sequence Simulator - Strict Physics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         input[type=number]::-webkit-inner-spin-button, 
@@ -14,37 +14,17 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
         .tab-btn.active { background-color: #1e293b; border-left-color: #3b82f6; color: #ffffff; }
-        .texture-lung { filter: url(#texture-spongy); }
-        .texture-brain { filter: url(#texture-parenchyma); }
-        .phantom-layer { transition: fill 0.4s ease, opacity 0.4s ease; }
     </style>
 </head>
 <body class="h-screen bg-slate-900 text-slate-300 font-sans flex flex-col overflow-hidden text-sm">
-
-    <!-- SCHERMATA LOGIN -->
-    <div id="login-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center transition-opacity duration-500">
-        <div class="bg-slate-900 border border-slate-700 p-8 rounded-lg shadow-2xl flex flex-col items-center gap-4 w-80">
-            <div class="w-12 h-12 bg-blue-600 text-white font-bold flex items-center justify-center rounded-lg text-2xl mb-2">S</div>
-            <h2 class="text-xl font-bold text-slate-100 text-center">SIMULATORE RM</h2>
-            <p class="text-xs text-slate-400 text-center mb-4">Inserisci la password (simulatore)</p>
-            <input type="password" id="login-pwd" class="w-full bg-slate-950 border border-slate-600 rounded p-2 text-center text-slate-200 focus:border-blue-500 outline-none" placeholder="Password">
-            <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition-colors uppercase tracking-wider text-xs mt-2">Accedi</button>
-            <p id="login-err" class="text-red-400 text-xs hidden mt-2">Password errata!</p>
-        </div>
-    </div>
 
     <!-- HEADER -->
     <header class="bg-slate-950 border-b border-slate-800 p-3 flex justify-between items-center shrink-0 relative z-40">
         <div class="flex items-center gap-4">
             <div class="w-7 h-7 bg-blue-600 text-white font-bold flex items-center justify-center rounded-sm">S</div>
             <div>
-                <h1 class="text-base font-bold text-slate-100 tracking-wide">SIMULATORE RM AVANZATO</h1>
-                <p class="text-xs text-slate-500">Fisica delle Sequenze & Anatomia Multi-Planare</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-4">
-            <div id="alert-banner" class="hidden bg-red-900/50 border border-red-500 text-red-200 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">
-                SAR ALTO
+                <h1 class="text-base font-bold text-slate-100 tracking-wide">MRI ENGINE - STRICT PHYSICS</h1>
+                <p class="text-xs text-slate-500">Syngo Console Parameters & Bloch Ballistics</p>
             </div>
         </div>
     </header>
@@ -56,7 +36,6 @@
             <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="contrast">Contrast</button>
             <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="resolution">Resolution</button>
             <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="geometry">Geometry</button>
-            <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="system">System</button>
             <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="physio">Physio</button>
             <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-slate-400 hover:bg-slate-800 transition-colors" data-target="sequence">Sequence</button>
             <button class="tab-btn p-3 text-left font-medium border-l-4 border-transparent text-blue-400 hover:bg-slate-800 transition-colors mt-auto border-t border-slate-800" data-target="setup">Setup</button>
@@ -66,172 +45,16 @@
         <main class="flex-1 overflow-y-auto p-4 flex flex-col xl:flex-row gap-4 bg-slate-900">
             <div class="flex-1 bg-slate-800 border border-slate-700 rounded-md p-4" id="parameters-container"></div>
 
-            <!-- PHANTOM VIEWER -->
+            <!-- PHANTOM VIEWER (Basic structure per tenere in piedi l'interfaccia) -->
             <div class="w-full xl:w-96 flex flex-col gap-4 shrink-0">
-                <div class="bg-black border border-slate-700 rounded-md p-4 flex flex-col items-center justify-center relative flex-1 min-h-[450px]">
-                    <span id="phantom-title" class="absolute top-2 left-2 text-[10px] text-slate-400 font-bold uppercase tracking-widest z-10 bg-black/70 px-2 py-1 rounded">View</span>
-                    
-                    <div id="phantom-container" class="relative w-full aspect-square border border-slate-800 bg-black transition-all duration-300 overflow-hidden rounded-md">
+                <div class="bg-black border border-slate-700 rounded-md p-4 flex flex-col items-center justify-center relative flex-1 min-h-[400px]">
+                    <span id="phantom-title" class="absolute top-2 left-2 text-[10px] text-slate-500 uppercase tracking-widest z-10 bg-black/50 px-1 rounded">Phantom</span>
+                    <div id="phantom-container" class="relative w-full aspect-square border border-slate-800 bg-black transition-all duration-300 overflow-hidden">
                         <svg viewBox="0 0 200 200" class="w-full h-full">
-                            <defs>
-                                <filter id="mri-noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 1 0" /></filter>
-                                <filter id="texture-spongy"><feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="3" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.4 0" in2="SourceGraphic" operator="in"/></filter>
-                                <filter id="texture-parenchyma"><feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="2" result="noise"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.15 0" in2="SourceGraphic" operator="in"/></filter>
-                            </defs>
-
-                            <!-- ===================================== ABDOMEN ===================================== -->
-                            <g id="group-abdomen-Transversal" class="hidden">
-                                <path id="abd-ax-fat" class="phantom-layer" d="M 10 100 C 10 20, 190 20, 190 100 C 190 170, 160 190, 100 190 C 40 190, 10 170, 10 100 Z"/>
-                                <path id="abd-ax-muscle" class="phantom-layer" d="M 15 100 C 15 30, 185 30, 185 100 C 185 160, 150 175, 100 175 C 50 175, 15 160, 15 100 Z"/>
-                                <path id="abd-ax-liver" class="phantom-layer texture-parenchyma" d="M 20 90 C 20 40, 95 35, 110 45 C 120 52, 125 70, 105 85 C 90 95, 75 135, 40 135 C 25 135, 20 115, 20 90 Z"/>
-                                <path id="abd-ax-spleen" class="phantom-layer texture-parenchyma" d="M 180 85 C 180 65, 160 45, 140 50 C 130 52, 135 70, 145 85 C 155 100, 175 110, 180 85 Z"/>
-                                <!-- Right Kidney (Complex) -->
-                                <path id="abd-ax-rk-cortex" class="phantom-layer" d="M 35 145 C 30 125, 50 115, 65 115 C 75 115, 80 135, 70 150 C 60 165, 40 165, 35 145 Z"/>
-                                <path id="abd-ax-rk-medulla" class="phantom-layer" d="M 45 135 L 55 125 L 60 135 L 55 145 Z M 48 145 L 65 140 L 60 150 Z"/>
-                                <!-- Left Kidney (Complex) -->
-                                <path id="abd-ax-lk-cortex" class="phantom-layer" d="M 165 145 C 170 125, 150 115, 135 115 C 125 115, 120 135, 130 150 C 140 165, 160 165, 165 145 Z"/>
-                                <path id="abd-ax-lk-medulla" class="phantom-layer" d="M 155 135 L 145 125 L 140 135 L 145 145 Z M 152 145 L 135 140 L 140 150 Z"/>
-                                <circle id="abd-ax-aorta" class="phantom-layer" cx="90" cy="125" r="9"/>
-                                <path id="abd-ax-spine" class="phantom-layer" d="M 85 145 C 80 140, 120 140, 115 145 C 120 165, 80 165, 85 145 Z"/>
-                                <path id="abd-ax-fluid" class="phantom-layer" d="M 95 65 C 105 60, 115 65, 110 75 C 105 85, 95 85, 90 75 Z"/> <!-- Gallbladder -->
-                            </g>
-                            <g id="group-abdomen-Coronal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="abd-cor-fat" class="phantom-layer" d="M 20 10 L 180 10 C 190 50, 190 150, 180 190 L 20 190 C 10 150, 10 50, 20 10 Z"/>
-                                <path id="abd-cor-muscle" class="phantom-layer" d="M 30 20 L 170 20 C 180 50, 180 150, 170 180 L 30 180 C 20 150, 20 50, 30 20 Z"/>
-                                <path id="abd-cor-liver" class="phantom-layer" d="M 35 30 C 90 30, 110 50, 115 70 C 120 90, 80 130, 40 120 C 30 110, 30 50, 35 30 Z"/>
-                                <path id="abd-cor-spleen" class="phantom-layer" d="M 165 40 C 150 40, 135 55, 140 70 C 145 90, 165 95, 170 70 C 175 55, 170 40, 165 40 Z"/>
-                                <path id="abd-cor-lk-cortex" class="phantom-layer" d="M 135 100 C 120 100, 115 120, 120 140 C 125 155, 145 155, 150 135 C 155 115, 145 100, 135 100 Z"/>
-                                <path id="abd-cor-rk-cortex" class="phantom-layer" d="M 65 110 C 80 110, 85 130, 80 150 C 75 165, 55 165, 50 145 C 45 125, 55 110, 65 110 Z"/>
-                                <path id="abd-cor-spine" class="phantom-layer" d="M 90 20 L 110 20 L 110 180 L 90 180 Z"/>
-                            </g>
-                            <g id="group-abdomen-Sagittal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="abd-sag-fat" class="phantom-layer" d="M 40 10 L 160 10 C 180 100, 180 150, 160 190 L 40 190 C 20 150, 20 100, 40 10 Z"/>
-                                <path id="abd-sag-spine" class="phantom-layer" d="M 120 20 L 140 20 L 140 180 L 120 180 Z"/>
-                                <path id="abd-sag-liver" class="phantom-layer" d="M 50 30 C 100 30, 110 60, 110 90 C 110 130, 70 150, 50 140 C 40 100, 40 50, 50 30 Z"/>
-                                <path id="abd-sag-rk-cortex" class="phantom-layer" d="M 90 100 C 110 100, 115 120, 110 140 C 100 150, 80 150, 75 130 C 70 110, 80 100, 90 100 Z"/>
-                            </g>
-
-                            <!-- ===================================== PELVIS ===================================== -->
-                            <g id="group-pelvis-Transversal" class="hidden">
-                                <path id="pel-ax-fat" class="phantom-layer" d="M 10 90 C 10 30, 190 30, 190 90 C 190 160, 150 190, 100 190 C 50 190, 10 160, 10 90 Z"/>
-                                <path id="pel-ax-muscle" class="phantom-layer texture-parenchyma" d="M 20 90 C 20 40, 180 40, 180 90 C 180 150, 140 175, 100 175 C 60 175, 20 150, 20 90 Z"/>
-                                <path id="pel-ax-bladder" class="phantom-layer" d="M 70 65 C 70 45, 130 45, 130 65 C 135 85, 115 100, 100 100 C 85 100, 65 85, 70 65 Z"/>
-                                <!-- Prostate Zonal Anatomy -->
-                                <path id="pel-ax-pz" class="phantom-layer" d="M 80 110 C 80 95, 120 95, 120 110 C 125 130, 115 135, 100 135 C 85 135, 75 130, 80 110 Z"/>
-                                <path id="pel-ax-tz" class="phantom-layer" d="M 88 110 C 88 100, 112 100, 112 110 C 115 120, 108 125, 100 125 C 92 125, 85 120, 88 110 Z"/>
-                                <path id="pel-ax-rectum" class="phantom-layer" d="M 85 150 C 85 140, 115 140, 115 150 C 115 165, 85 165, 85 150 Z"/>
-                                <!-- Bones -->
-                                <circle id="pel-ax-femur-l" class="phantom-layer" cx="45" cy="115" r="14"/>
-                                <circle id="pel-ax-femur-r" class="phantom-layer" cx="155" cy="115" r="14"/>
-                                <path id="pel-ax-bone-cortex" class="phantom-layer" d="M 30 90 C 30 60, 50 50, 55 60 C 45 80, 45 120, 60 140 C 45 150, 30 130, 30 90 M 170 90 C 170 60, 150 50, 145 60 C 155 80, 155 120, 140 140 C 155 150, 170 130, 170 90"/>
-                            </g>
-                            <g id="group-pelvis-Sagittal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="pel-sag-fat" class="phantom-layer" d="M 30 20 L 160 20 C 180 80, 180 150, 150 190 L 30 190 C 10 150, 10 80, 30 20 Z"/>
-                                <path id="pel-sag-spine" class="phantom-layer" d="M 130 20 C 130 80, 150 120, 140 160 C 130 150, 110 80, 110 20 Z"/>
-                                <path id="pel-sag-bladder" class="phantom-layer" d="M 50 80 C 50 60, 90 60, 100 80 C 110 110, 80 120, 60 110 C 50 100, 50 90, 50 80 Z"/>
-                                <path id="pel-sag-pz" class="phantom-layer" d="M 70 120 C 90 115, 100 125, 95 140 C 90 150, 75 145, 70 135 Z"/>
-                                <path id="pel-sag-rectum" class="phantom-layer" d="M 100 120 C 110 100, 125 120, 115 160 L 100 150 Z"/>
-                                <path id="pel-sag-penis" class="phantom-layer" d="M 40 120 C 50 110, 60 130, 40 160 C 30 150, 30 130, 40 120 Z"/>
-                            </g>
-                            <g id="group-pelvis-Coronal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="pel-cor-fat" class="phantom-layer" d="M 10 20 L 190 20 C 190 100, 170 180, 100 180 C 30 180, 10 100, 10 20 Z"/>
-                                <path id="pel-cor-muscle" class="phantom-layer" d="M 20 30 L 180 30 C 180 90, 150 160, 100 160 C 50 160, 20 90, 20 30 Z"/>
-                                <path id="pel-cor-bladder" class="phantom-layer" d="M 70 70 C 70 40, 130 40, 130 70 C 135 100, 110 120, 100 120 C 90 120, 65 100, 70 70 Z"/>
-                                <circle id="pel-cor-femur-l" class="phantom-layer" cx="40" cy="100" r="15"/>
-                                <circle id="pel-cor-femur-r" class="phantom-layer" cx="160" cy="100" r="15"/>
-                                <path id="pel-cor-pz" class="phantom-layer" d="M 85 125 C 85 115, 115 115, 115 125 C 120 140, 110 145, 100 145 C 90 145, 80 140, 85 125 Z"/>
-                            </g>
-
-                            <!-- ===================================== HEAD ===================================== -->
-                            <g id="group-head-Transversal" class="hidden">
-                                <path id="head-ax-fat" class="phantom-layer" d="M 30 100 C 30 35, 170 35, 170 100 C 170 165, 140 185, 100 185 C 60 185, 30 165, 30 100 Z"/>
-                                <path id="head-ax-bone" class="phantom-layer" d="M 36 100 C 36 42, 164 42, 164 100 C 164 158, 135 178, 100 178 C 65 178, 36 158, 36 100 Z"/>
-                                <path id="head-ax-csf" class="phantom-layer" d="M 40 100 C 40 47, 160 47, 160 100 C 160 153, 130 173, 100 173 C 70 173, 40 153, 40 100 Z"/>
-                                <path id="head-ax-gm" class="phantom-layer texture-brain" d="M 44 100 C 44 52, 156 52, 156 100 C 156 148, 128 168, 100 168 C 72 168, 44 148, 44 100 Z"/>
-                                <path id="head-ax-wm" class="phantom-layer" d="M 52 100 C 52 65, 148 65, 148 100 C 148 135, 120 155, 100 155 C 80 155, 52 135, 52 100 Z"/>
-                                <!-- Butterfly Ventricles -->
-                                <path id="head-ax-ventricles" class="phantom-layer" d="M 85 75 C 95 60, 100 65, 100 85 C 100 65, 105 60, 115 75 C 120 90, 110 115, 105 125 C 100 115, 100 115, 100 105 C 100 115, 100 115, 95 125 C 90 115, 80 90, 85 75 Z"/>
-                            </g>
-                            <g id="group-head-Sagittal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="head-sag-fat" class="phantom-layer" d="M 20 100 C 20 30, 160 20, 180 80 C 190 140, 140 190, 80 180 C 30 170, 20 140, 20 100 Z"/>
-                                <path id="head-sag-bone" class="phantom-layer" d="M 25 100 C 25 35, 155 25, 175 80 C 185 135, 135 185, 80 175 C 35 165, 25 140, 25 100 Z"/>
-                                <path id="head-sag-gm" class="phantom-layer" d="M 30 100 C 30 40, 150 30, 170 80 C 180 130, 130 180, 80 170 C 40 160, 30 140, 30 100 Z"/>
-                                <path id="head-sag-wm" class="phantom-layer" d="M 40 100 C 40 50, 140 40, 155 80 C 165 120, 120 160, 80 150 C 50 140, 40 130, 40 100 Z"/>
-                                <path id="head-sag-ventricles" class="phantom-layer" d="M 80 80 C 110 70, 130 90, 120 100 C 100 95, 90 105, 80 110 C 70 105, 60 90, 80 80 Z"/>
-                            </g>
-                            <g id="group-head-Coronal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="head-cor-fat" class="phantom-layer" d="M 30 90 C 30 20, 170 20, 170 90 C 170 160, 140 190, 100 190 C 60 190, 30 160, 30 90 Z"/>
-                                <path id="head-cor-bone" class="phantom-layer" d="M 35 90 C 35 25, 165 25, 165 90 C 165 155, 135 185, 100 185 C 65 185, 35 155, 35 90 Z"/>
-                                <path id="head-cor-gm" class="phantom-layer" d="M 40 90 C 40 30, 160 30, 160 90 C 160 150, 130 180, 100 180 C 70 180, 40 150, 40 90 Z"/>
-                                <path id="head-cor-wm" class="phantom-layer" d="M 50 90 C 50 40, 150 40, 150 90 C 150 140, 120 160, 100 160 C 80 160, 50 140, 50 90 Z"/>
-                                <path id="head-cor-ventricles" class="phantom-layer" d="M 85 80 C 95 70, 100 75, 100 90 C 100 75, 105 70, 115 80 C 120 100, 105 110, 100 120 C 95 110, 80 100, 85 80 Z"/>
-                            </g>
-
-                            <!-- ===================================== THORAX ===================================== -->
-                            <g id="group-thorax-Transversal" class="hidden">
-                                <path id="tho-ax-fat" class="phantom-layer" d="M 10 100 C 10 20, 190 20, 190 100 C 190 160, 150 180, 100 180 C 50 180, 10 160, 10 100 Z"/>
-                                <path id="tho-ax-muscle" class="phantom-layer" d="M 15 100 C 15 30, 185 30, 185 100 C 185 155, 145 170, 100 170 C 55 170, 15 155, 15 100 Z"/>
-                                <path id="tho-ax-lung-l" class="phantom-layer texture-lung" d="M 175 100 C 175 50, 150 40, 115 45 C 115 85, 125 135, 115 155 C 150 150, 175 135, 175 100 Z"/>
-                                <path id="tho-ax-lung-r" class="phantom-layer texture-lung" d="M 25 100 C 25 50, 50 40, 85 45 C 85 85, 75 135, 85 155 C 50 150, 25 135, 25 100 Z"/>
-                                <path id="tho-ax-heart" class="phantom-layer" d="M 100 85 C 120 75, 140 100, 120 120 C 100 130, 70 110, 80 90 C 85 80, 95 80, 100 85 Z"/>
-                                <path id="tho-ax-blood" class="phantom-layer" d="M 105 95 C 115 90, 125 105, 115 115 C 105 120, 95 105, 105 95 Z"/>
-                                <circle id="tho-ax-aorta" class="phantom-layer" cx="102" cy="130" r="8"/> 
-                                <path id="tho-ax-spine" class="phantom-layer" d="M 90 145 C 90 135, 110 135, 110 145 C 110 160, 90 160, 90 145 Z"/>
-                            </g>
-                            <g id="group-thorax-Coronal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="tho-cor-fat" class="phantom-layer" d="M 20 20 L 180 20 C 190 80, 190 150, 180 190 L 20 190 C 10 150, 10 80, 20 20 Z"/>
-                                <path id="tho-cor-lung-l" class="phantom-layer texture-lung" d="M 110 40 C 140 30, 170 50, 160 140 C 140 150, 120 140, 110 120 Z"/>
-                                <path id="tho-cor-lung-r" class="phantom-layer texture-lung" d="M 90 40 C 60 30, 30 50, 40 140 C 60 150, 80 140, 90 120 Z"/>
-                                <path id="tho-cor-heart" class="phantom-layer" d="M 85 90 C 110 80, 130 100, 120 130 C 100 140, 80 120, 85 90 Z"/>
-                            </g>
-                            <g id="group-thorax-Sagittal" class="hidden">
-                                <rect width="200" height="200" fill="#111" />
-                                <path id="tho-sag-fat" class="phantom-layer" d="M 40 20 L 160 20 C 180 80, 180 150, 160 190 L 40 190 C 20 150, 20 80, 40 20 Z"/>
-                                <path id="tho-sag-spine" class="phantom-layer" d="M 120 20 L 140 20 L 140 190 L 120 190 Z"/>
-                                <path id="tho-sag-heart" class="phantom-layer" d="M 60 80 C 100 70, 110 100, 100 130 C 80 140, 50 120, 60 80 Z"/>
-                                <path id="tho-sag-aorta" class="phantom-layer" d="M 80 60 C 100 50, 110 70, 110 90 L 100 90 C 100 75, 90 65, 80 70 Z"/>
-                            </g>
-
-                            <!-- LAYER NOISE / ARTIFACTS -->
-                            <rect id="ph-noise" x="0" y="0" width="200" height="200" filter="url(#mri-noise)" opacity="0" style="mix-blend-mode: screen; pointer-events: none;" />
+                            <rect id="ph-bg" x="0" y="0" width="200" height="200" fill="#111" />
+                            <circle id="ph-tissue" cx="100" cy="100" r="80" fill="#444" />
+                            <circle id="ph-fluid" cx="100" cy="100" r="30" fill="#888" />
                         </svg>
-                    </div>
-
-                    <!-- LEGENDE DINAMICHE -->
-                    <div id="legend-abdomen" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
-                        <div class="flex items-center gap-2"><div id="leg-abd-liver" class="w-3 h-3 rounded-sm"></div> Fegato</div>
-                        <div class="flex items-center gap-2"><div id="leg-abd-spleen" class="w-3 h-3 rounded-sm"></div> Milza</div>
-                        <div class="flex items-center gap-2"><div id="leg-abd-kidney" class="w-3 h-3 rounded-sm"></div> Rene (Corticale)</div>
-                        <div class="flex items-center gap-2"><div id="leg-abd-fat" class="w-3 h-3 rounded-sm"></div> Grasso</div>
-                        <div class="flex items-center gap-2"><div id="leg-abd-fluid" class="w-3 h-3 rounded-sm"></div> Fluidi (Bile/LCR)</div>
-                    </div>
-
-                    <div id="legend-pelvis" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
-                        <div class="flex items-center gap-2"><div id="leg-pel-pz" class="w-3 h-3 rounded-sm"></div> Prostata PZ</div>
-                        <div class="flex items-center gap-2"><div id="leg-pel-tz" class="w-3 h-3 rounded-sm"></div> Prostata TZ</div>
-                        <div class="flex items-center gap-2"><div id="leg-pel-bladder" class="w-3 h-3 rounded-sm"></div> Vescica</div>
-                        <div class="flex items-center gap-2"><div id="leg-pel-fat" class="w-3 h-3 rounded-sm"></div> Grasso</div>
-                    </div>
-
-                    <div id="legend-head" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
-                        <div class="flex items-center gap-2"><div id="leg-hd-gm" class="w-3 h-3 rounded-sm"></div> Sostanza Grigia</div>
-                        <div class="flex items-center gap-2"><div id="leg-hd-wm" class="w-3 h-3 rounded-sm"></div> Sostanza Bianca</div>
-                        <div class="flex items-center gap-2"><div id="leg-hd-csf" class="w-3 h-3 rounded-sm"></div> LCR (Ventricoli)</div>
-                        <div class="flex items-center gap-2"><div id="leg-hd-fat" class="w-3 h-3 rounded-sm"></div> Grasso Sottocutaneo</div>
-                    </div>
-
-                    <div id="legend-thorax" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] text-slate-400 w-full uppercase tracking-wider hidden">
-                        <div class="flex items-center gap-2"><div id="leg-tho-lung" class="w-3 h-3 rounded-sm"></div> Polmone</div>
-                        <div class="flex items-center gap-2"><div id="leg-tho-heart" class="w-3 h-3 rounded-sm"></div> Miocardio</div>
-                        <div class="flex items-center gap-2"><div id="leg-tho-blood" class="w-3 h-3 rounded-sm"></div> Sangue (Vasi)</div>
-                        <div class="flex items-center gap-2"><div id="leg-tho-fat" class="w-3 h-3 rounded-sm"></div> Grasso</div>
                     </div>
                 </div>
             </div>
@@ -246,12 +69,12 @@
                 <div id="out-ta" class="font-mono text-lg text-slate-200">00:00</div>
             </div>
             <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-1">
-                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Slices / ETL</div>
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">ETL / Shots</div>
                 <div id="out-etl" class="font-mono text-sm text-slate-200">-</div>
             </div>
             <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-1">
-                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">SAR (W/kg)</div>
-                <div id="out-sar" class="font-mono text-sm text-slate-200 border-b border-transparent transition-colors">0.0</div>
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">g-Factor / R</div>
+                <div id="out-gfactor" class="font-mono text-sm text-slate-400">1.00</div>
             </div>
             <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-[2]">
                 <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1 flex justify-between">
@@ -260,9 +83,13 @@
                 </div>
                 <div id="out-res" class="font-mono text-sm text-blue-300">0.0 × 0.0 × 0.0 mm</div>
             </div>
+            <div class="bg-slate-900 border border-slate-700 px-3 py-2 rounded flex-1">
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest mb-1">SNR Base</div>
+                <div id="out-snr-base" class="font-mono text-lg text-slate-400">0.00</div>
+            </div>
             <div id="box-snr-final" class="border border-blue-500 bg-blue-900/20 px-4 py-2 rounded flex-1 transition-colors relative">
-                <div class="text-[10px] text-blue-300 uppercase tracking-widest mb-1">SNR Relativo</div>
-                <div id="out-snr-final" class="font-mono text-xl font-bold text-blue-400">1.00</div>
+                <div class="text-[10px] text-blue-300 uppercase tracking-widest mb-1">SNR Final</div>
+                <div id="out-snr-final" class="font-mono text-xl font-bold text-blue-400">0.00</div>
             </div>
         </div>
     </footer>
